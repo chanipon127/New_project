@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Answer</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Sarabun", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            background:
+                radial-gradient(circle at top left, #4d89ff 0%, #07132f 35%),
+                radial-gradient(circle at bottom right, #18c7e6 0%, transparent 30%),
+                #07132f;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 64px;
+            color: white;
+            margin-bottom: 40px;
+
+            text-shadow:
+                0 4px 20px rgba(0, 0, 0, .35);
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+
+            border-radius: 25px;
+            padding: 40px;
+
+            box-shadow:
+                0 15px 35px rgba(0, 0, 0, .25);
+        }
+
+        .upload-box {
+            border: 3px dashed #4d89ff;
+            border-radius: 18px;
+
+            padding: 40px 20px;
+            margin-bottom: 25px;
+
+            transition: .25s;
+        }
+
+        .upload-box:hover {
+            background: #f5f9ff;
+        }
+
+        .upload-box input {
+            font-size: 18px;
+        }
+
+        .file-name {
+            margin-top: 15px;
+            font-size: 18px;
+            color: #444;
+        }
+
+        button {
+            width: 220px;
+            height: 60px;
+
+            border: none;
+            border-radius: 15px;
+
+            background: linear-gradient(
+                135deg,
+                #5b9dff,
+                #3478f6
+            );
+
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+
+            cursor: pointer;
+            transition: .25s;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+
+            box-shadow:
+                0 10px 25px rgba(52, 120, 246, .45);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1 class="title">Excel Answer</h1>
+
+        <div class="card">
+
+            <form action="/upload" method="post" enctype="multipart/form-data">
+
+                <div class="upload-box">
+                    <input
+                        type="file"
+                        id="excelFile"
+                        name="excel_file"
+                        accept=".xlsx,.xls"
+                        required>
+
+                    <div class="file-name" id="fileName">
+                        กรุณาเลือกไฟล์ Excel
+                    </div>
+                </div>
+
+                <button type="submit">
+                    Upload
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <script>
+        document.getElementById("excelFile")
+            .addEventListener("change", function () {
+
+                const file = this.files[0];
+
+                document.getElementById("fileName").textContent =
+                    file
+                    ? `ไฟล์ที่เลือก: ${file.name}`
+                    : "กรุณาเลือกไฟล์ Excel";
+            });
+    </script>
+
+</body>
+
+</html>
