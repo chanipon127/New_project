@@ -1,0 +1,24 @@
+# Dataset
+all_dataset/
+
+# AI Models
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Archive
+*.zip
+*.rar
+*.7z
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual Env
+venv/
+.venv/
+
+# VS Code
+.vscode/

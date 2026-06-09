@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Line Meter — Web Input</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0e0f13; --surface: #16181f; --card: #1d2030; --border: #2b2f45;
+      --accent: #5b8dee; --accent2: #34c97e; --muted: #5d6585; --text: #e6eaf5;
+      --radius: 12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* TOPBAR */
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 28px; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 500; }
+    .logo-icon { width: 30px; height: 30px; background: var(--accent); border-radius: 8px; display: grid; place-items: center; font-size: 14px; }
+    .v-pill { font-size: 10px; font-weight: 600; letter-spacing: 2px; background: rgba(91,141,238,.15); color: var(--accent); padding: 3px 9px; border-radius: 99px; border: 1px solid rgba(91,141,238,.3); }
+    .status-pill { font-size: 12px; color: var(--muted); background: var(--card); border: 1px solid var(--border); padding: 4px 12px; border-radius: 99px; }
+    .status-pill.ok { color: var(--accent2); border-color: rgba(52,201,126,.3); background: rgba(52,201,126,.08); }
+
+    /* LAYOUT */
+    .body { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 57px); }
+
+    /* SIDEBAR */
+    .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 20px 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+    .sec-label { font-size: 10px; font-weight: 600; letter-spacing: 2.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .field { margin-bottom: 10px; }
+    .field label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 5px; letter-spacing: .4px; }
+    .field input { width: 100%; background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 11px; color: var(--text); font-family: 'Inter', monospace; font-size: 13px; outline: none; transition: border-color .2s; }
+    .field input:focus { border-color: var(--accent); }
+    .g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    /* SUMMARY BAR */
+    .summary-bar { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+    .sum-chip { padding: 12px 14px; border-right: 1px solid var(--border); text-align: center; }
+    .sum-chip:last-child { border-right: none; }
+    .sum-chip .sv { font-size: 20px; font-weight: 500; color: var(--accent); display: block; line-height: 1; margin-bottom: 3px; }
+    .sum-chip .sl { font-size: 10px; color: var(--muted); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+
+    /* MAIN */
+    .main { display: flex; flex-direction: column; overflow: hidden; }
+    .rows-area { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+    /* ROW CARD */
+    .row-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+    .row-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .row-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .btn-remove { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 13px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: color .15s, border-color .15s; }
+    .btn-remove:hover { color: #e05c5c; border-color: #e05c5c; }
+    textarea.row-ta { width: 100%; min-height: 72px; resize: vertical; font-family: 'Sarabun', 'THSarabunNew', 'Noto Sans Thai', sans-serif; font-size: 15px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); outline: none; transition: border-color .2s; line-height: 1.6; }
+    textarea.row-ta:focus { border-color: var(--accent); }
+    .row-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 10px; }
+    .metric { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px; text-align: center; }
+    .metric .mv { font-size: 20px; font-weight: 500; color: var(--text); line-height: 1; }
+    .metric .ml { font-size: 10px; color: var(--muted); margin-top: 3px; text-transform: uppercase; letter-spacing: .5px; }
+    .metric.hi .mv { color: var(--accent2); }
+    .seg-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; color: var(--muted); line-height: 1.6; margin-top: 6px; word-break: break-word; }
+    .seg-box-label { font-size: 10px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: .5px; opacity: .7; }
+    .empty-metrics { font-size: 12px; color: var(--muted); margin-top: 8px; opacity: .6; }
+
+    /* ADD ROW BUTTON */
+    .btn-add-wrap { padding: 0 16px 16px; }
+    .btn-add { width: 100%; padding: 11px; border-radius: var(--radius); border: 1.5px dashed var(--border); background: transparent; color: var(--muted); font-family: 'Inter', sans-serif; font-size: 13px; cursor: pointer; transition: border-color .2s, color .2s; }
+    .btn-add:hover { border-color: var(--accent2); color: var(--accent2); }
+
+    /* MEASURE BOX */
+    #measure-box { position: absolute; left: -9999px; top: 0; visibility: hidden; box-sizing: border-box !important; white-space: normal !important; word-break: break-word !important; overflow-wrap: break-word !important; }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">📐</div>
+    Line Meter
+    <span class="v-pill">WEB</span>
+  </div>
+  <span class="status-pill" id="status-pill">กำลังโหลด...</span>
+</div>
+
+<div class="body">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div>
+      <div class="sec-label">การตั้งค่ากล่องข้อความ</div>
+      <div class="field"><label>กว้าง (px)</label><input type="number" id="boxWidth" value="640" oninput="reanalyzeAll()"></div>
+      <div class="g2">
+        <div class="field"><label>font-size (px)</label><input type="number" id="fontSize" value="22" oninput="reanalyzeAll()"></div>
+        <div class="field"><label>line-height</label><input type="number" id="lineHeight" value="1.8" step="0.1" oninput="reanalyzeAll()"></div>
+        <div class="field"><label>padding (px)</label><input type="number" id="padding" value="10" oninput="reanalyzeAll()"></div>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--muted);line-height:1.7;border-top:1px solid var(--border);padding-top:16px;">
+      <strong style="color:var(--text);display:block;margin-bottom:6px;">วิธีใช้</strong>
+      พิมพ์หรือวางข้อความในกล่องทางขวา ระบบจะนับบรรทัดให้อัตโนมัติตามขนาดกล่องที่ตั้งไว้<br><br>
+      กด <strong style="color:var(--text)">+ เพิ่มรายการ</strong> เพื่อเปรียบเทียบหลายข้อความพร้อมกัน
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="summary-bar">
+      <div class="sum-chip"><span class="sv" id="s-total">0</span><span class="sl">รายการ</span></div>
+      <div class="sum-chip"><span class="sv" id="s-avg">—</span><span class="sl">เฉลี่ย บรรทัด</span></div>
+      <div class="sum-chip"><span class="sv" id="s-max">—</span><span class="sl">สูงสุด บรรทัด</span></div>
+      <div class="sum-chip"><span class="sv" id="s-avgw">—</span><span class="sl">เฉลี่ย คำ</span></div>
+    </div>
+
+    <div class="rows-area" id="rows-area"></div>
+
+    <div class="btn-add-wrap">
+      <button class="btn-add" onclick="addRow()">+ เพิ่มรายการ</button>
+    </div>
+  </div>
+
+</div>
+
+<div id="measure-box"></div>
+
+<script>
+  const segmenter = new Intl.Segmenter('th', { granularity: 'word' });
+  let singleLineH = null;
+  let rows = [];
+  let nextId = 1;
+
+  function applyBoxStyle() {
+    const box = document.getElementById('measure-box');
+    box.style.fontFamily = "THSarabunPali,'Sarabun','THSarabunNew','Noto Sans Thai',sans-serif";
+    box.style.fontWeight = 'normal';
+    box.style.fontSize = document.getElementById('fontSize').value + 'px';
+    box.style.lineHeight = document.getElementById('lineHeight').value;
+    const w = document.getElementById('boxWidth').value;
+    box.style.width = w + 'px'; box.style.minWidth = w + 'px'; box.style.maxWidth = w + 'px';
+    const pad = document.getElementById('padding').value;
+    box.style.padding = pad + 'px 14px';
+  }
+
+  function calibrate() {
+    const box = document.getElementById('measure-box');
+    box.textContent = 'ก';
+    singleLineH = box.scrollHeight;
+  }
+
+  function measureLines(text) {
+    if (!text || !text.trim()) return null;
+    const box = document.getElementById('measure-box');
+    box.textContent = text.replace(/\n/g, ' ');
+    return Math.max(1, Math.round(box.scrollHeight / singleLineH));
+  }
+
+  function countChars(t) { return (t || '').replace(/[\s\n]/g, '').length; }
+
+  function countWords(t) {
+    if (!t || !t.trim()) return 0;
+    return [...segmenter.segment(t)].filter(s => s.isWordLike).length;
+  }
+
+  function segmentText(t) {
+    if (!t || !t.trim()) return '';
+    return [...segmenter.segment(t)].filter(s => s.isWordLike).map(s => s.segment).join(' / ');
+  }
+
+  function analyze(text) {
+    if (!text || !text.trim()) return null;
+    applyBoxStyle(); calibrate();
+    const lines = measureLines(text);
+    const chars = countChars(text);
+    const words = countWords(text);
+    const avgWpl = lines > 0 ? parseFloat((words / lines).toFixed(1)) : null;
+    const seg = segmentText(text);
+    return { lines, chars, words, avgWpl, seg };
+  }
+
+  function escHtml(s) {
+    return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function renderMetricsHTML(res) {
+    if (!res) return '<div class="empty-metrics">พิมพ์ข้อความเพื่อวิเคราะห์...</div>';
+    return `
+      <div class="row-metrics">
+        <div class="metric hi"><div class="mv">${res.lines}</div><div class="ml">บรรทัด</div></div>
+        <div class="metric"><div class="mv">${res.chars}</div><div class="ml">ตัวอักษร</div></div>
+        <div class="metric"><div class="mv">${res.words}</div><div class="ml">คำ</div></div>
+        <div class="metric"><div class="mv">${res.avgWpl ?? '—'}</div><div class="ml">คำ/บรรทัด</div></div>
+      </div>
+      ${res.seg ? `<div class="seg-box"><div class="seg-box-label">ตัดคำ</div>${escHtml(res.seg)}</div>` : ''}
+    `;
+  }
+
+  function renderCard(row, index) {
+    const removeBtn = rows.length > 1
+      ? `<button class="btn-remove" onclick="removeRow(${row.id})" title="ลบ">✕</button>`
+      : '';
+    return `
+      <div class="row-card" id="card-${row.id}">
+        <div class="row-top">
+          <span class="row-label">รายการที่ ${index + 1}</span>
+          ${removeBtn}
+        </div>
+        <textarea class="row-ta" placeholder="พิมพ์หรือวางข้อความภาษาไทยที่นี่..." oninput="onInput(${row.id}, this.value)">${escHtml(row.text)}</textarea>
+        <div id="metrics-${row.id}">${renderMetricsHTML(row.result)}</div>
+      </div>
+    `;
+  }
+
+  function renderAll() {
+    const area = document.getElementById('rows-area');
+    area.innerHTML = rows.map((r, i) => renderCard(r, i)).join('');
+    updateSummary();
+  }
+
+  function onInput(id, text) {
+    const row = rows.find(r => r.id === id);
+    if (!row) return;
+    row.text = text;
+    row.result = analyze(text);
+    document.getElementById(`metrics-${id}`).innerHTML = renderMetricsHTML(row.result);
+    updateSummary();
+  }
+
+  function addRow() {
+    rows.push({ id: nextId++, text: '', result: null });
+    renderAll();
+    setTimeout(() => {
+      const textareas = document.querySelectorAll('.row-ta');
+      if (textareas.length) textareas[textareas.length - 1].focus();
+    }, 50);
+  }
+
+  function removeRow(id) {
+    rows = rows.filter(r => r.id !== id);
+    renderAll();
+  }
+
+  function reanalyzeAll() {
+    rows.forEach(r => {
+      r.result = r.text.trim() ? analyze(r.text) : null;
+      const el = document.getElementById(`metrics-${r.id}`);
+      if (el) el.innerHTML = renderMetricsHTML(r.result);
+    });
+    updateSummary();
+  }
+
+  function updateSummary() {
+    const all = rows.map(r => r.result).filter(Boolean);
+    const linesArr = all.map(r => r.lines);
+    const wordsArr = all.map(r => r.words);
+    const avg = a => a.length ? (a.reduce((x, y) => x + y, 0) / a.length).toFixed(1) : '—';
+    const max = a => a.length ? Math.max(...a) : '—';
+    document.getElementById('s-total').textContent = rows.length;
+    document.getElementById('s-avg').textContent = avg(linesArr);
+    document.getElementById('s-max').textContent = max(linesArr);
+    document.getElementById('s-avgw').textContent = avg(wordsArr);
+  }
+
+  async function init() {
+    await document.fonts.ready;
+    await new Promise(r => requestAnimationFrame(r));
+    applyBoxStyle(); calibrate();
+    rows = [{ id: nextId++, text: '', result: null }];
+    renderAll();
+    const pill = document.getElementById('status-pill');
+    pill.textContent = 'พร้อมใช้งาน';
+    pill.classList.add('ok');
+  }
+
+  init();
+</script>
+</body>
+</html>

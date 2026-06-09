@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Page</title>
+
+    <style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:
+        radial-gradient(circle at top left,#3b82f6 0%,transparent 30%),
+        radial-gradient(circle at bottom right,#06b6d4 0%,transparent 30%),
+        #0f172a;
+    font-family:"Segoe UI",sans-serif;
+}
+
+.container{
+    width:100%;
+    max-width:1200px;
+
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
+
+.page-title{
+    color:white;
+    font-size:60px;
+    font-weight:700;
+    text-align:center;
+
+    margin-bottom:80px;
+}
+
+.card{
+    background:rgba(255,255,255,0.08);
+    backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,0.1);
+    border-radius:30px;
+    padding:60px;
+    text-align:center;
+    box-shadow:0 25px 50px rgba(0,0,0,.3);
+}
+
+.logo{
+    width:90px;
+    height:90px;
+    margin:auto;
+    margin-bottom:25px;
+    border-radius:20px;
+    background:linear-gradient(135deg,#3b82f6,#06b6d4);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:40px;
+}
+
+h1{
+    color:white;
+    font-size:42px;
+    margin-bottom:10px;
+}
+
+.subtitle{
+    color:#94a3b8;
+    font-size:18px;
+    margin-bottom:50px;
+}
+
+.menu{
+    display:flex;
+    justify-content:center;
+    gap:80px;     
+
+    width:100%;
+}
+
+.option{
+    width:500px;
+    height:380px;
+
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:30px;
+
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+
+    transition:.3s;
+    cursor:pointer;
+}
+
+.option:hover{
+    transform:translateY(-10px);
+    border-color:#38bdf8;
+    background:rgba(56,189,248,.08);
+}
+
+.icon{
+    font-size:80px;
+    margin-bottom:25px;
+}
+
+.option h2{
+    color:white;
+    font-size:32px;
+    margin-bottom:15px;
+}
+
+.option p{
+    color:#94a3b8;
+    font-size:18px;
+    line-height:1.8;
+    max-width:320px;
+}
+
+.footer{
+    margin-top:35px;
+    color:#64748b;
+    font-size:14px;
+}
+
+@media(max-width:768px){
+    .menu{
+        flex-direction:column;
+        align-items:center;
+    }
+
+    .card{
+        padding:40px 25px;
+    }
+
+    h1{
+        font-size:32px;
+    }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+    <h1 class="page-title">
+        เลือกรูปแบบสำหรับการตรวจ
+    </h1>
+
+    <div class="menu">
+
+        <div class="option"
+             onclick="window.location.href='single.html'">
+            <div class="icon">👤</div>
+            <h2>วิเคราะห์ 1 คน</h2>
+            <p>สำหรับทดลองหรือวิเคราะห์ข้อความรายบุคคล</p>
+        </div>
+
+        <div class="option"
+             onclick="window.location.href='excel.html'">
+            <div class="icon">📑</div>
+            <h2>วิเคราะห์จาก Excel</h2>
+            <p>ประมวลผลข้อมูลนักเรียนหลายคนพร้อมกัน</p>
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>
