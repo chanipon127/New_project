@@ -1,0 +1,403 @@
+<!doctype html>
+<html>
+
+<head>
+    <title>Score Result</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "THSarabunPali", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: 40px;
+
+
+            background:
+                radial-gradient(circle at top left, #4d89ff 0%, #07132f 35%),
+                radial-gradient(circle at bottom right, #18c7e6 0%, transparent 30%),
+                #07132f;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+
+        .page-title {
+            color: #ffffff;
+
+            font-size: 48px;
+            font-weight: bold;
+
+            margin-bottom: 15px;
+
+            text-shadow:
+                0 3px 10px rgba(0, 0, 0, .3);
+        }
+
+        .section-title {
+            color: #dbeafe;
+
+            font-size: 36px;
+            font-weight: bold;
+
+            margin-bottom: 20px;
+
+            text-shadow:
+                0 2px 8px rgba(59, 130, 246, .4);
+        }
+
+        .card h2 {
+            font-size: 32px;
+            color: #1d3557;
+            margin-bottom: 15px;
+        }
+
+        .card h2 {
+            font-size: 32px;
+            color: #1d3557;
+            margin-bottom: 20px;
+        }
+
+        .score-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            overflow: hidden;
+            border-radius: 20px;
+        }
+
+        .score-table th {
+            background: linear-gradient(135deg,
+                    #3b82f6,
+                    #2563eb);
+
+            color: white;
+
+            padding: 12px;
+
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .score-table td {
+            padding: 12px;
+            font-size: 20px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .score-table tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+
+        .score-table tr:hover td {
+            background: #eff6ff;
+        }
+
+        .score-table td:first-child {
+            width: 90px;
+            text-align: center;
+            font-weight: bold;
+            color: #2563eb;
+            font-size: 22px;
+        }
+
+        .score-table td:last-child {
+            width: 120px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 22px;
+        }
+
+        .total-score {
+            margin-top: 20px;
+
+            background: linear-gradient(135deg,
+                    #10b981,
+                    #059669);
+
+            color: white;
+
+            padding: 15px;
+
+            border-radius: 15px;
+
+            text-align: center;
+
+            font-size: 24px;
+            font-weight: bold;
+
+            box-shadow:
+                0 8px 20px rgba(16, 185, 129, .35);
+        }
+
+        .reason-box {
+            margin-top: 25px;
+
+            background: #f8fafc;
+
+            border-left: 6px solid #3478f6;
+
+            border-radius: 15px;
+
+            padding: 20px;
+        }
+
+        .reason-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1d3557;
+            margin-bottom: 12px;
+        }
+
+        .reason-item {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .good {
+            color: #16a34a;
+            font-weight: bold;
+        }
+
+        .bad {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        .info-box {
+            margin-top: 20px;
+
+            background: #eef6ff;
+
+            border-radius: 15px;
+
+            padding: 15px 20px;
+        }
+
+        .info-box p {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .back-btn {
+            display: block;
+
+            width: 250px;
+
+            margin: 40px auto 0;
+
+            padding: 14px 20px;
+
+            text-align: center;
+
+            text-decoration: none;
+
+            color: white;
+
+            font-size: 30px;
+            font-weight: bold;
+
+            border-radius: 15px;
+
+            background: linear-gradient(135deg,
+                    #5b9dff,
+                    #3478f6);
+
+            transition: .25s;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-3px);
+
+            box-shadow:
+                0 10px 25px rgba(52, 120, 246, .45);
+        }
+
+        .score-full {
+            color: #16a34a;
+        }
+
+        .score-half {
+            color: #f59e0b;
+        }
+
+        .score-zero {
+            color: #dc2626;
+        }
+
+        hr {
+            border: none;
+            height: 1px;
+            background: #e5e7eb;
+            margin: 25px 0;
+        }
+
+        @media (max-width:768px) {
+
+            body {
+                padding: 20px;
+            }
+
+            .page-title {
+                font-size: 42px;
+            }
+
+            .card h2 {
+                font-size: 32px;
+            }
+
+            .score-table th,
+            .score-table td {
+                font-size: 20px;
+                padding: 10px;
+            }
+
+            .total-score {
+                font-size: 24px;
+            }
+
+            .reason-title {
+                font-size: 26px;
+            }
+
+            .reason-item {
+                font-size: 20px;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <h1 class="page-title">
+        ผลการตรวจ
+    </h1>
+
+    <h2 class="section-title">ข้อ 30.1</h2>
+
+    <table class="score-table">
+
+        <tr>
+            <th>ตัวชี้วัด</th>
+            <th>รายละเอียด</th>
+            <th>คะแนน</th>
+        </tr>
+
+        <tr>
+            <td>S1</td>
+            <td>ใจความสำคัญ</td>
+            <td>{{ result_301.S1_SCORE }}/4</td>
+        </tr>
+
+        <tr>
+            <td>S2</td>
+            <td>การเรียงลำดับและเชื่อมโยงความคิด</td>
+            <td>{{ result_301.S2_SCORE }}/2</td>
+        </tr>
+
+        <tr>
+            <td>S3</td>
+            <td>ความถูกต้องตามหลักการเขียนย่อความ</td>
+            <td>{{ result_301.S3_SCORE }}/1</td>
+        </tr>
+
+        <tr>
+            <td>S4</td>
+            <td>การสะกดคำ</td>
+            <td>{{ result_301.S4_SCORE }}/1</td>
+        </tr>
+
+        <tr>
+            <td>S5</td>
+            <td>การใช้คำ/ถ้อยคำสำนวน</td>
+            <td>{{ result_301.S5_SCORE }}/1</td>
+        </tr>
+
+        <tr>
+            <td>S6</td>
+            <td>การใช้ประโยค</td>
+            <td>{{ result_301.S6_SCORE }}/1</td>
+        </tr>
+
+    </table>
+
+    <div class="total-score">
+        คะแนนรวม : {{ result_301.TOTAL_SCORE }}/10
+    </div>
+
+    <hr>
+
+    <h2 class="section-title">
+        ข้อ 30.2
+    </h2>
+
+    <table class="score-table">
+
+        <tr>
+            <th>ตัวชี้วัด</th>
+            <th>รายละเอียด</th>
+            <th>คะแนน</th>
+        </tr>
+
+        <tr>
+            <td>S7</td>
+            <td>คำบอกข้อคิดเห็น</td>
+            <td>{{ result_302["s7_score"] }}/1</td>
+        </tr>
+
+        <tr>
+            <td>S8</td>
+            <td>เหตุผลสนับสนุน</td>
+            <td>{{ result_302["s8_score"] }}/8</td>
+        </tr>
+
+        <tr>
+            <td>S9</td>
+            <td>การเรียงลำดับและเชื่อมโยงความคิด</td>
+            <td>{{ result_302["s9_score"] }}/3</td>
+        </tr>
+
+        <tr>
+            <td>S10</td>
+            <td>ความถูกต้องตามหลักการแสดงความคิดเห็น</td>
+            <td>{{ result_302["s10_score"] }}/2</td>
+        </tr>
+
+        <tr>
+            <td>S11</td>
+            <td>การสะกดคำ</td>
+            <td>{{ result_302["s11_score"] }}/2</td>
+        </tr>
+
+        <tr>
+            <td>S12</td>
+            <td>การใช้คำ/ถ้อยคำสำนวน</td>
+            <td>{{ result_302["s12_score"] }}/2</td>
+        </tr>
+
+        <tr>
+            <td>S13</td>
+            <td>การใช้ประโยค</td>
+            <td>{{ result_302["s13_score"] }}/2</td>
+        </tr>
+
+    </table>
+
+    <div class="total-score">
+        คะแนนรวม : {{ result_302["TOTAL_SCORE"] }}/20
+    </div>
+
+    <a href="home_page.html" class="back-btn">กลับหน้าแรก</a>
+
+</body>
+
+</html>

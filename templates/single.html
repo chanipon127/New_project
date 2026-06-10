@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Single answer</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+
+            font-family: "THSarabunPali", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background:
+                radial-gradient(circle at top left, #4d89ff 0%, #07132f 35%),
+                radial-gradient(circle at bottom right, #18c7e6 0%, transparent 30%),
+                #07132f;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: 40px auto 0;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .page-title {
+            font-size: 72px;
+            font-weight: bold;
+            color: white;
+
+            margin-bottom: 40px;
+
+            text-shadow:
+                0 4px 20px rgba(0, 0, 0, .35);
+        }
+
+        .card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+        }
+
+        textarea {
+            font-family: "THSarabunPali", sans-serif !important;
+            font-weight: normal !important;
+
+            font-size: 22px !important;
+
+            min-width: 640px !important;
+            max-width: 640px !important;
+
+            min-height: 225px !important;
+            max-height: 225px !important;
+
+            padding: 10px;
+            padding-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 18px;
+            resize: none;
+
+            margin-top: 10px;
+
+            background: rgba(255, 255, 255, .95);
+
+            box-shadow:
+                0 15px 35px rgba(0, 0, 0, .25);
+
+            overflow-y: auto;
+
+            line-height: 1.6;
+        }
+
+        textarea::-webkit-scrollbar {
+            width: 12px;
+        }
+
+        textarea::-webkit-scrollbar-track {
+            margin: 6px 0;
+        }
+
+        textarea:focus {
+            outline: none;
+
+            box-shadow:
+                0 15px 35px rgba(0, 0, 0, .25),
+                0 0 0 4px rgba(77, 137, 255, .4);
+        }
+
+        .question-block {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .question-title {
+            color: white;
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .line-counter {
+            color: white;
+            font-size: 22px;
+            margin-top: 8px;
+            text-align: right;
+            width: 100%;
+        }
+
+        #measure-box {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            visibility: hidden;
+
+            font-family: "THSarabunPali", sans-serif;
+            font-size: 22px;
+            line-height: 1.6;
+
+            width: 640px;
+            padding: 10px;
+
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 30px;
+
+            width: 220px;
+            height: 65px;
+
+            border: none;
+            border-radius: 15px;
+
+            background: linear-gradient(135deg,
+                    #5b9dff,
+                    #3478f6);
+
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+
+            cursor: pointer;
+
+            transition: .25s;
+        }
+
+        button:hover {
+            transform: translateY(-3px);
+
+            box-shadow:
+                0 10px 25px rgba(52, 120, 246, .45);
+        }
+
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 2.3rem;
+            }
+
+            textarea {
+                font-size: 1.2rem;
+                min-height: 250px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="page-title">Single Answer</h1>
+
+        <form class="card" action="/score_single" method="POST">
+
+            <div class="question-block">
+                <label class="question-title">
+                    ข้อ 30.1 เขียนย่อความจากบทอ่าน
+                </label>
+
+                <textarea name="answer_301" id="answer_301" placeholder="ตอบข้อ 30.1 ย่อความจากบทอ่าน"
+                    required></textarea>
+            </div>
+
+            <div class="question-block">
+                <label class="question-title">
+                    ข้อ 30.2 เขียนความคิดเห็น
+                </label>
+
+                <textarea name="answer_302" id="answer_302" placeholder="ตอบข้อ 30.2 แสดงความคิดเห็น"
+                    required></textarea>
+
+                <input type="hidden" name="numline_302" id="numline_302" value="0">
+
+                <div class="line-counter">
+                    จำนวนบรรทัด: <span id="lineCount302">0</span>
+                </div>
+
+                <div id="measure-box"></div>
+            </div>
+
+            <button type="submit">
+                Submit
+            </button>
+
+        </form>
+    </div>
+
+    <script>
+        const textarea = document.getElementById("answer_302");
+        const counter = document.getElementById("lineCount302");
+        const measureBox = document.getElementById("measure-box");
+
+        let singleLineHeight = 0;
+
+        // วัดความสูง 1 บรรทัด
+        function calibrate() {
+            measureBox.innerHTML = "ก";
+            singleLineHeight = measureBox.scrollHeight;
+        }
+
+        // นับจำนวนบรรทัด
+        function countLines(text) {
+
+            if (!text.trim()) {
+                counter.textContent = 0;
+                return;
+            }
+
+            measureBox.textContent = text.replace(/\n/g, " ");
+
+            const lines = Math.max(
+                1,
+                Math.round(measureBox.scrollHeight / singleLineHeight)
+            );
+
+            counter.textContent = lines;
+            document.getElementById("numline_302").value = lines;
+        }
+
+        window.onload = () => {
+            calibrate();
+            countLines("");
+        };
+
+        textarea.addEventListener("input", () => {
+            countLines(textarea.value);
+        });
+    </script>
+
+</body>
+
+</html>

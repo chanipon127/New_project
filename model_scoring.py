@@ -1333,83 +1333,6 @@ def predict_main_ideas(text):
 
     return result
 
-# =========================================================
-# EXAMPLE
-# =========================================================
-
-text = """
- คำว่ามือ2มไม่มีความหมายตรงตามถอยคำว่ามือลำดับที่2 แต่ใช่เป็นสำนวนมีความหมายว่าของที่ใช้แล้วชึ่งการแลกเปลี่ยนค้ามือสองในประเทศไทยเริ่มต้นในช่วงวิกฤตเศรษฐกิจปีพ.ศ 2540จากค้าขายในลักษณะ เปิดท้ายขายของและลดมลพิษทางน้ำและอากาศจากกระบวนการผลิตนอกจากนี้ยังช้วยสนับสนุนเศรษฐกิจและนอกจากปัญหาต่าง ๆ ข้างต้นความนิยมสินค้ามือสองอ่ยางก้าวกระโดดยังก่อให้เกิดปัญหาการนำสินค้ามือสองเกิดความต้องการ
-"""
-
-result = predict_main_ideas(text)
-
-print("\n==========================")
-print("ข้อตกลงการตรวจ")
-print("==========================")
-
-print(f"ผ่าน           : {result['AGREEMENT_PASS']}")
-print(f"Similarity     : {result['AGREEMENT_SIMILARITY']}")
-print(f"หมายเหตุ       : {result['AGREEMENT_REASON']}")
-print(f"ลำดับข้อ       : {result['ENUMERATION_CHECK']}")
-print(f"ยกข้อความ      : {result['COPY_CHECK']} (similarity={result['COPY_SIMILARITY']:.4f})")
-print(f"ประโยคความเดียว: {result['SINGLE_SENTENCE_CHECK']}")
-
-print("\n==========================")
-print("S1 MAIN IDEA")
-print("==========================")
-
-for label in LABEL_COLUMNS:
-    print(
-        f"{label}: "
-        f"{result[label]} "
-        f"(prob={result[f'{label}_PROB']:.4f})"
-    )
-
-print(f"\nS1 Score : {result['S1_SCORE']}/4")
-
-print("\n==========================")
-print("S2 SCORE")
-print("==========================")
-
-print(f"Score : {result['S2_SCORE']}/2")
-print(f"Prob0 = {result['S2_PROB_0']:.4f}")
-print(f"Prob1 = {result['S2_PROB_1']:.4f}")
-print(f"Prob2 = {result['S2_PROB_2']:.4f}")
-
-print("\n==========================")
-print("S3 LANGUAGE")
-print("==========================")
-
-print(f"Score      : {result['S3_SCORE']}/1")
-print(f"Similarity : {result['S3_SIMILARITY']}")
-print(f"Reason     : {result['S3_REASON']}")
-
-print("\n==========================")
-print("S4 SPELLING / FORMAT")
-print("==========================")
-
-print(f"Score   : {result['S4_SCORE']}/1")
-print(f"Reasons : {result['S4_REASONS']}")
-
-print("\n==========================")
-print("S5 SCORE")
-print("==========================")
-
-print(f"Score      : {result['S5_SCORE']}/1")
-#print(f"Pred Class : {result['S5_PRED_CLASS']}")
-
-print("\n==========================")
-print("S6 SCORE")
-print("==========================")
-
-print(f"Score      : {result['S6_SCORE']}/1")
-#print(f"Pred Class : {result['S6_PRED_CLASS']}")
-
-print("\n==========================")
-print("FINAL SCORE")
-print("==========================")
-
-print(f"TOTAL : {result['TOTAL_SCORE']}/10")
 
 
 #========================= ข้อ 30.2 =========================
@@ -2224,6 +2147,8 @@ def score_student_answer(
 
     if (not has_keyword) and is_copy:
 
+        total_score = 0
+
         return {
             "ข้อตกลง_บรรทัด": num_line,
             "ข้อตกลง_info": numline_info,
@@ -2245,7 +2170,9 @@ def score_student_answer(
             "s11_reasons": ["คัดลอกบทอ่าน"],
 
             "s12_score": 0,
-            "s13_score": 0
+            "s13_score": 0,
+
+            "TOTAL_SCORE": total_score
         }
 
     # =====================================================
@@ -2255,6 +2182,8 @@ def score_student_answer(
     # =====================================================
 
     if has_keyword and is_copy:
+
+        total_score = s7_score
 
         return {
             "ข้อตกลง_บรรทัด": num_line,
@@ -2277,7 +2206,9 @@ def score_student_answer(
             "s11_reasons": ["คัดลอกบทอ่าน"],
 
             "s12_score": 0,
-            "s13_score": 0
+            "s13_score": 0,
+
+            "TOTAL_SCORE": total_score
         }
 
     # =====================================================
@@ -2290,6 +2221,11 @@ def score_student_answer(
 
         s8_score = s8_predict_score(
             text_302
+        )
+
+        total_score = (
+            s7_score +
+            s8_score
         )
 
         return {
@@ -2314,7 +2250,9 @@ def score_student_answer(
             "s11_reasons": ["ไม่ตรวจ"],
 
             "s12_score": 0,
-            "s13_score": 0
+            "s13_score": 0,
+
+            "TOTAL_SCORE": total_score
         }
 
     # =====================================================
@@ -2356,6 +2294,16 @@ def score_student_answer(
             "จำนวนบรรทัด 3-4 บรรทัด (ลดคะแนนครึ่งหนึ่ง)"
         )
 
+    total_score = (
+            s7_score +
+            s8_score +
+            s9_score +
+            s10_result["s10_score"] +
+            s11_result["s11_score"] +
+            s12_score +
+            s13_score
+    )
+
     return {
         "ข้อตกลง_บรรทัด": num_line,
         "ข้อตกลง_info": numline_info,
@@ -2372,107 +2320,7 @@ def score_student_answer(
         **s11_result,
 
         "s12_score": s12_score,
-        "s13_score": s13_score
+        "s13_score": s13_score,
+
+        "TOTAL_SCORE": total_score
     }
-
-# =========================================================
-# BATCH PIPELINE — สำหรับตรวจไฟล์ Excel ทั้งไฟล์
-# =========================================================
-
-def score_excel_file(
-    input_path,
-    text_col_302="TEXT_302",
-    numline_col=None,
-    output_path="scored_output.xlsx"
-):
-    df        = pd.read_excel(input_path)
-    result_df = df.copy()
-
-    result_df[text_col_302] = result_df[text_col_302].astype(str)
-
-    texts_302 = result_df[text_col_302].tolist()
-
-    # batch predict (S9, S12)
-    s9_preds = s9_predict_batch(texts_302)
-    s12_preds = s12_predict_batch(texts_302)
-    s13_preds = s13_predict_batch(texts_302)
-
-    rows = []
-    for i, t302 in enumerate(texts_302):
-
-      num_line, numline_info = check_numline(t302)
-
-      has_keyword, keyword_info = s7_keyword_classify(t302)
-
-      s8_score   = s8_predict_score(t302)
-      s10_result = s10_evaluate(t302)
-
-      numline_302 = int(df[numline_col].iloc[i]) if numline_col and numline_col in df.columns else None
-      s11_result  = s11_evaluate(t302, numline_302=numline_302)
-
-      rows.append({
-          "ข้อตกลง_บรรทัด": num_line,
-          "ข้อตกลง_info": numline_info,
-          "s7_score": 1 if has_keyword else 0,
-          "s7_info": keyword_info,
-          "s8_score": s8_score,
-          "s9_score": s9_preds[i],
-          **s10_result,
-          **s11_result,
-          "s12_score": s12_preds[i],
-          "s13_score": s13_preds[i]
-      })
-
-    result_df = pd.concat([result_df, pd.DataFrame(rows)], axis=1)
-    result_df.to_excel(output_path, index=False)
-    print(f"บันทึกไฟล์เรียบร้อย → {output_path}")
-    return result_df
-
-# =========================================================
-# TEST
-# =========================================================
-
-test_cases = [
-    {
-        "text": """สินค้ามือสองได้รับการยอมรับในสิ่งเเวดล้อมเพราะลดการเบียดเบียนสิ่งเเวดล้อมไม่ต้องผลิตสินค้าใหม่ลดการสร้างขยะลดมลพิษทางน้ำเเละอากาศ      """,
-        "numline": 2
-    },
-    {
-        "text": """เห็นด้วย เนื่องจาก การแลกเปลี่ยนค้าขายสินค้ามือสองเป็นการนำสิ่งของที่ตนเองไม่ใช้แล้วมาขาย เพื่อเสริมรายได้ให้เจ้าของกิจการ ทั้งการในรูปแบบการขายปลีกและขายส่ง เช่น การขายในตลาดนัด หรือการขายในตลาดนัดออนไลน์ ทั้งยังช่วยสนับสนุนเศรษฐกิจ และ ช่วยเหลือผู้ยากไร้ที่ไม่มีทุนทรัพย์ในการซื้อ ทั้งนี้สินค้ามือสองยังเป็นสินค้าที่ได้รับการยอมรับว่าเป็นสินค้าที่ให้ประโยชน์ต่อสิ่งแวดล้อม เพราะสามารถลด การเบียดเบียนสิ่งแวดล้อมโดยการไม่ต้องผลิตสินค้าใหม่ ช่วยลดการสร้างขยะ และนอกจากนี้ ยังช่วยลดมลพิษทางน้ำและอากาศได้อีกด้วย  และปัจจุบัน การค้าขายสินค้ามืิอสองมีเป็นจำนวนมากทั้งในตลาดนัดหรือในตลาดออนไลน์ เช่น การขายเสื้อผ้า การขายอุปกรณ์การเรียน หรืออุปกรณ์ต่าง ๆ ที่จำเป็นในการใช้ในชีวิตประจำวัน""",
-        "numline": 7
-    },
-    {
-        "text": """ส่วนตัวคิดว่าจะจะลดนิดหนึ่งค่ะเพราะเราซื้อสินค้ามือสองมาใช้แล้วส่วนตัวไม่ใช่คนที่ทื้งของมั่วๆค่ะ ถ้าอันไหนที่ใช้ได้ก็เก็บไว้ค่ะถ้าอันไหนไม่ไหวจริงๆหรือพังเสียหายก็จะเอาไปทิ้งค่ะ ทำไหมหนูถึงคิดว่า การใช้สินค้ามือสองช่วยลดปัญหาสิ่งแวดล้อมไหม หนูคิดว่าช่วยอยู่ค่ะ เพราสินค้ามืิสองเราไม่ต้องผลิตใหม่เรื่อยๆค่ะ หรือว่าถ้าเรามีของอย่าง เช่น ตุ๊กกะตาที่เราไม่ใช้เเล้วเราก็สามารถเอาให้น้องเราต่อได้ค่ะจะไท่ได้ซ์้อใหม่เรื่อยๆ และช่วยลดปัญหาสิ่งแวดล้อมด้วยค่ะ""",
-        "numline": 4
-    },
-    {
-        "text": """สอนค้ามือสองก็มีประโยช์นแล้วแต่บางคนที่เห็นด้วยการให้สินค้ามือสองช่วงลดสิ่งแวดล้อมได้จริงและดีต่อสิ่งแวดล้อมด้วยมันช่วยลดขยะและพิษและมีความนิยม""",
-        "numline": 2
-    }
-
-]
-
-
-for item in test_cases:
-
-    text = item["text"]
-    numline = item["numline"]
-
-    result = score_student_answer(
-        text_302=text,
-        numline_302=numline
-    )
-
-    print(f"TEXT_302 : {text}")
-    print(f"NUM_LINE : {numline}")
-
-    print(f"  ข้อตกลงการตรวจ : {result['ข้อตกลง_บรรทัด']} บรรทัด | {result['ข้อตกลง_info']}")
-    print(f"  Copy : {result['copy_result']} (sim={result['copy_similarity']})")
-    print(f"  S7  : {result['s7_score']} | {result['s7_info']}")
-    print(f"  S8  : {result['s8_score']}")
-    print(f"  S9  : {result['s9_score']}")
-    print(f"  S10 : {result['s10_score']} | {result['sentiment_th']} | {result['s10_mistakes']}")
-    print(f"  S11 : {result['s11_score']} | {result['s11_reasons']}")
-    print(f"  S12 : {result['s12_score']}")
-    print(f"  S13 : {result['s13_score']}")
-    print()
