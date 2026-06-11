@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Result</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "THSarabunPali", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            padding: 40px;
+
+            background:
+                radial-gradient(circle at top left, #4d89ff 0%, #07132f 35%),
+                radial-gradient(circle at bottom right, #18c7e6 0%, transparent 30%),
+                #07132f;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: auto;
+        }
+
+        .page-title {
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .card {
+            background: white;
+            border-radius: 25px;
+            padding: 30px;
+
+            box-shadow:
+                0 15px 35px rgba(0, 0, 0, .2);
+        }
+
+        .section-title {
+            color: #1d3557;
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: linear-gradient(135deg,
+                    #3b82f6,
+                    #2563eb);
+
+            color: white;
+
+            padding: 12px;
+            font-size: 22px;
+            text-align: center;
+        }
+
+        td {
+            padding: 12px;
+            font-size: 20px;
+            text-align: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        tr:hover {
+            background: #eff6ff;
+        }
+
+        .back-btn {
+            display: block;
+
+            width: 250px;
+
+            margin: 30px auto 0;
+
+            padding: 14px 20px;
+
+            text-align: center;
+            text-decoration: none;
+
+            color: white;
+            font-size: 30px;
+            font-weight: bold;
+
+            border-radius: 15px;
+
+            background: linear-gradient(135deg,
+                    #5b9dff,
+                    #3478f6);
+        }
+
+        .back-btn:hover {
+            transform: translateY(-3px);
+
+            box-shadow:
+                0 10px 25px rgba(52, 120, 246, .45);
+        }
+
+        .criteria-box {
+            margin-bottom: 20px;
+
+            background: #f8fafc;
+
+            border-radius: 15px;
+
+            overflow: hidden;
+
+            border: 1px solid #dbeafe;
+        }
+
+        .criteria-box summary {
+
+            cursor: pointer;
+
+            padding: 15px 20px;
+
+            font-size: 24px;
+            font-weight: bold;
+
+            color: #1d3557;
+
+            background: #eef6ff;
+
+            user-select: none;
+        }
+
+        .criteria-box summary:hover {
+            background: #dbeafe;
+        }
+
+        .criteria-content {
+            padding: 20px;
+        }
+
+        .criteria-section {
+            margin-bottom: 20px;
+        }
+
+        .criteria-section h3 {
+            color: #2563eb;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .criteria-section ul {
+            padding-left: 25px;
+        }
+
+        .criteria-section li {
+            font-size: 22px;
+            margin-bottom: 6px;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        .score-table {
+            width: 100%;
+            table-layout: fixed;
+        }
+
+        .score-table th {
+            background: linear-gradient(135deg,
+                    #3b82f6,
+                    #2563eb);
+
+            color: white;
+            padding: 12px;
+            font-size: 20px;
+        }
+
+        .score-table td {
+            padding: 10px;
+            font-size: 18px;
+            vertical-align: top;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .score-table tr:nth-child(even) {
+            background: #f8fafc;
+        }
+
+        .score-table tr:hover {
+            background: #eff6ff;
+        }
+
+        .score-table th:nth-child(1),
+        .score-table td:nth-child(1) {
+            width: 150px;
+        }
+
+        .score-table th:nth-child(2),
+        .score-table td:nth-child(2) {
+            width: 180px;
+        }
+
+        .score-table th:nth-child(3),
+        .score-table td:nth-child(3) {
+            width: 180px;
+        }
+
+        .score-table th:nth-child(4),
+        .score-table td:nth-child(4) {
+            width: 120px;
+        }
+
+        .score-table th:nth-child(5),
+        .score-table td:nth-child(5),
+        .score-table th:nth-child(6),
+        .score-table td:nth-child(6) {
+            width: 120px;
+        }
+
+        .score-table th:nth-child(7),
+        .score-table td:nth-child(7) {
+            width: 100px;
+        }
+
+        details {
+            text-align: left;
+        }
+
+        details summary {
+            cursor: pointer;
+
+            font-weight: bold;
+
+            color: #2563eb;
+
+            list-style: none;
+        }
+
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details summary::before {
+            content: "▶ ";
+        }
+
+        details[open] summary::before {
+            content: "▼ ";
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1 class="page-title">
+            ผลการตรวจจากไฟล์ Excel
+        </h1>
+
+        <div class="card">
+
+            <h2 class="section-title">
+                ตารางคะแนนทั้งหมด
+            </h2>
+
+            <!-- กล่องเกณฑ์คะแนน -->
+            <details class="criteria-box">
+
+                <summary>
+                    ดูรายละเอียดเกณฑ์การให้คะแนน
+                </summary>
+
+                <div class="criteria-content">
+
+                    <div class="criteria-section">
+                        <h3>ข้อ 30.1 (10 คะแนน)</h3>
+
+                        <ul>
+                            <li><b>S1</b> ใจความสำคัญ (4 คะแนน)</li>
+                            <li><b>S2</b> การเรียงลำดับและเชื่อมโยงความคิด (2 คะแนน)</li>
+                            <li><b>S3</b> ความถูกต้องตามหลักการเขียนย่อความ (1 คะแนน)</li>
+                            <li><b>S4</b> การสะกดคำ (1 คะแนน)</li>
+                            <li><b>S5</b> การใช้คำ/ถ้อยคำสำนวน (1 คะแนน)</li>
+                            <li><b>S6</b> การใช้ประโยค (1 คะแนน)</li>
+                        </ul>
+                    </div>
+
+                    <div class="criteria-section">
+                        <h3>ข้อ 30.2 (20 คะแนน)</h3>
+
+                        <ul>
+                            <li><b>S7</b> คำบอกข้อคิดเห็น (1 คะแนน)</li>
+                            <li><b>S8</b> เหตุผลสนับสนุน (8 คะแนน)</li>
+                            <li><b>S9</b> การเรียงลำดับและเชื่อมโยงความคิด (3 คะแนน)</li>
+                            <li><b>S10</b> ความถูกต้องตามหลักการแสดงความคิดเห็น (2 คะแนน)</li>
+                            <li><b>S11</b> การสะกดคำ (2 คะแนน)</li>
+                            <li><b>S12</b> การใช้คำ/ถ้อยคำสำนวน (2 คะแนน)</li>
+                            <li><b>S13</b> การใช้ประโยค (2 คะแนน)</li>
+                        </ul>
+                    </div>
+
+                </div>
+
+            </details>
+            <div class="table-wrapper">
+                <!-- ตาราง -->
+                <table class="score-table">
+
+                    <thead>
+                        <tr>
+                            <th>PAPER_CODE</th>
+                            <th>TEXT_301</th>
+                            <th>TEXT_302</th>
+                            <th>NUMLINE_302</th>
+                            <th>SCORE_301</th>
+                            <th>SCORE_302</th>
+                            <th>TOTAL</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {{ rows_html | safe }}
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+
+        <a href="/excel" class="back-btn">
+            กลับหน้าอัปโหลด
+        </a>
+
+    </div>
+
+</body>
+
+</html>

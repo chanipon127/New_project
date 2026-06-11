@@ -867,9 +867,19 @@ def predict_s5_score(text):
         logits     = outputs.logits
         pred_class = int(torch.argmax(logits, dim=-1).item())
 
+        score = s5_id2score[pred_class]
+
+        if score == 0.0:
+            reason = "ผิดตั้งแต่ 2 คำขึ้นไป"
+        elif score == 0.5:
+            reason = "ผิด 1 คำ"
+        else:
+            reason = "ถูกต้องทั้งหมด"
+
     return {
-        "S5_SCORE":      s5_id2score[pred_class],
-        "S5_PRED_CLASS": pred_class
+        "S5_SCORE":      score,
+        "S5_PRED_CLASS": pred_class,
+        "S5_REASON":     reason
     }
 
 # =========================================================
@@ -898,9 +908,19 @@ def predict_s6_score(text):
         logits     = outputs.logits
         pred_class = int(torch.argmax(logits, dim=-1).item())
 
+        score = s6_id2score[pred_class]
+
+        if score == 0.0:
+            reason = "ผิดตั้งแต่ 2 แห่งขึ้นไป"
+        elif score == 0.5:
+            reason = "ผิด 1 แห่ง"
+        else:
+            reason = "ถูกต้องทั้งหมด"
+
     return {
-        "S6_SCORE":      s6_id2score[pred_class],
-        "S6_PRED_CLASS": pred_class
+        "S6_SCORE":      score,
+        "S6_PRED_CLASS": pred_class,
+        "S6_REASON":     reason
     }
 
 # =========================================================
@@ -1029,8 +1049,18 @@ def predict_s2_score(processed_text):
         pred    = torch.argmax(logits, dim=-1).item()
         probs   = torch.softmax(logits, dim=-1)[0].cpu().numpy()
 
+        score = id2score[pred]
+
+        if score == 0:
+            reason = "เรียงลำดับและเชื่อมโยงความคิดไม่ถูกต้องตั้งแต่ 2 แห่งขึ้นไป"
+        elif score == 0.5:
+            reason = "เรียงลำดับและเชื่อมโยงความคิดไม่ถูกต้อง 1 แห่ง"
+        else:
+            reason = "เรียงลำดับและเชื่อมโยงความคิดถูกต้องทั้งทั้งหมด"
+
     return {
-        "S2_SCORE":  id2score[pred],
+        "S2_SCORE":  score,
+        "S2_REASON": reason,
         "S2_PROB_0": float(probs[0]),
         "S2_PROB_1": float(probs[1]),
         "S2_PROB_2": float(probs[2])
@@ -1179,12 +1209,12 @@ def predict_main_ideas(text):
 
         zero_result.update({
             "S1_SCORE":    0,
-            "S2_SCORE":    0, "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
+            "S2_SCORE":    0, "S2_REASON": "ไม่ผ่านข้อตกลงการตรวจ", "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
             "S3_SCORE":    0, "S3_SIMILARITY": agreement_similarity,
             "S3_REASON":   "ไม่ผ่านข้อตกลงการตรวจ",
             "S4_SCORE":    0.0, "S4_REASONS": "ไม่ผ่านข้อตกลงการตรวจ",
-            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1,
-            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1,
+            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1, "S5_REASON": "ไม่ผ่านข้อตกลงการตรวจ",
+            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1, "S6_REASON": "ไม่ผ่านข้อตกลงการตรวจ",
             "TOTAL_SCORE": 0
         })
         return zero_result
@@ -1218,6 +1248,14 @@ def predict_main_ideas(text):
         result[label]              = int(preds[i])
         result[f"{label}_PROB"]    = float(probs[i])
 
+    # เพิ่ม S1_REASON
+    s1_found = [
+        f"มีใจความสำคัญ ที่ {i}"
+        for i, label in enumerate(LABEL_COLUMNS, start=1)
+        if result[label] == 1
+    ]
+    result["S1_REASON"] = " | ".join(s1_found) if s1_found else "ไม่พบใจความสำคัญ"
+
     # =========================================================
     # ข้อตกลงการตรวจ: ถ้ามีลำดับข้อ → ตรวจแค่ S1, S2-S6 = 0
     # =========================================================
@@ -1231,12 +1269,12 @@ def predict_main_ideas(text):
 
     if enumeration_found == "มีการใช้ลำดับข้อ":
         result.update({
-            "S2_SCORE":    0, "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
+            "S2_SCORE":    0, "S2_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการใช้ลำดับข้อ)", "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
             "S3_SCORE":    0, "S3_SIMILARITY": 0.0,
             "S3_REASON":   "ไม่ผ่านข้อตกลงการตรวจ (มีการใช้ลำดับข้อ)",
             "S4_SCORE":    0.0, "S4_REASONS": "ไม่ผ่านข้อตกลงการตรวจ (มีการใช้ลำดับข้อ)",
-            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1,
-            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1,
+            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1, "S5_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการใช้ลำดับข้อ)",
+            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1, "S6_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการใช้ลำดับข้อ)",
             "COPY_CHECK":  "ไม่ได้ตรวจ (มีลำดับข้อ)",
             "COPY_SIMILARITY": 0.0,
             "TOTAL_SCORE": s1_score
@@ -1253,12 +1291,12 @@ def predict_main_ideas(text):
 
     if copy_label == "มีการยกข้อความจากบทอ่าน":
         result.update({
-            "S2_SCORE":    0, "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
+            "S2_SCORE":    0, "S2_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการยกข้อความจากบทอ่าน)", "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
             "S3_SCORE":    0, "S3_SIMILARITY": copy_similarity,
             "S3_REASON":   "ไม่ผ่านข้อตกลงการตรวจ (มีการยกข้อความจากบทอ่าน)",
             "S4_SCORE":    0.0, "S4_REASONS": "ไม่ผ่านข้อตกลงการตรวจ (มีการยกข้อความจากบทอ่าน)",
-            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1,
-            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1,
+            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1, "S5_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการยกข้อความจากบทอ่าน)",
+            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1, "S6_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการยกข้อความจากบทอ่าน)",
             "SINGLE_SENTENCE_CHECK": "ไม่ได้ตรวจ (มีการยกข้อความ)",
             "TOTAL_SCORE": s1_score
         })
@@ -1273,12 +1311,12 @@ def predict_main_ideas(text):
 
     if single_sentence_check == "เป็นประโยคความเดียว":
         result.update({
-            "S2_SCORE":    0, "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
+             "S2_SCORE":    0, "S2_REASON": "ไม่ผ่านข้อตกลงการตรวจ (เป็นประโยคความเดียว)", "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
             "S3_SCORE":    0, "S3_SIMILARITY": 0.0,
             "S3_REASON":   "ไม่ผ่านข้อตกลงการตรวจ (เป็นประโยคความเดียว)",
             "S4_SCORE":    0.0, "S4_REASONS": "ไม่ผ่านข้อตกลงการตรวจ (เป็นประโยคความเดียว)",
-            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1,
-            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1,
+            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1, "S5_REASON": "ไม่ผ่านข้อตกลงการตรวจ (เป็นประโยคความเดียว)",
+            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1, "S6_REASON": "ไม่ผ่านข้อตกลงการตรวจ (เป็นประโยคความเดียว)",
             "TOTAL_SCORE": s1_score
         })
         return result
@@ -1289,12 +1327,12 @@ def predict_main_ideas(text):
 
     if s1_score == 0:
         result.update({
-            "S2_SCORE":    0, "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
+            "S2_SCORE":    0, "S2_REASON": "ไม่ผ่านข้อตกลงการตรวจ (S1 = 0)", "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
             "S3_SCORE":    0, "S3_SIMILARITY": 0.0,
             "S3_REASON":   "ไม่ผ่านข้อตกลงการตรวจ (S1 = 0)",
             "S4_SCORE":    0.0, "S4_REASONS": "ไม่ผ่านข้อตกลงการตรวจ (S1 = 0)",
-            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1,
-            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1,
+            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1, "S5_REASON": "ไม่ผ่านข้อตกลงการตรวจ (S1 = 0)",
+            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1, "S6_REASON": "ไม่ผ่านข้อตกลงการตรวจ (S1 = 0)",
             "TOTAL_SCORE": 0
         })
         return result
@@ -1553,13 +1591,32 @@ def s8_predict_score(text):
     with torch.no_grad():
         outputs   = model_s8(**inputs)
         pred_class = torch.argmax(outputs.logits, dim=1).item()
-    return reverse_label_map_s8[pred_class]
+    
+    score = reverse_label_map_s8[pred_class]
+
+    s8_reason_map = {
+        8 : "แสดงเหตุผลสนับสนุนที่สอดคล้องกับความคิดเห็นและมีการยกตัวอย่างที่อยู่นอกบทอ่าน",
+        6 : "แสดงเหตุผลสนับสนุนที่สอดคล้องกับความคิดเห็นและมีการยกตัวย่างที่อยู่ในบทอ่าน",
+        4 : "แสดงเหตุผลสนับสนุนที่สอดคล้องกับความคิดเห็นแต่ไม่มีการยกตัวอย่าง / มีการยกตัวอย่างที่ไม่สอดคล้องกับเหตุผลสนับสนุน",
+        2 : "แสดงเหตุผลสนับสนุนแต่มีบางเหตุผลไม่สอดคล้องกับความคิดเห็น",
+        0 : "ไม่แสดงเหตุผลสนับสนุน / ยกข้อความจากบทอ่าน / เพิ่มหรือสลับคำจากบทอ่าน 1-2 คำ / ไม่เกี่ยวข้องกับบริบทของใจความสำคัญในบทอ่าน"
+    }
+    return score, s8_reason_map[score]
 
 # =========================================================
 # S9 — BERT Scoring (S2 model)
 # =========================================================
 
 MAX_LENGTH_S9 = 512
+
+S9_SCORE_MAP = {0: 0, 1: 0.5, 2: 1.5, 3: 2}
+
+S9_REASON_MAP = {
+    0:   "เรียงลำดับและเชื่อมโยงความคิดไม่ถูกต้องตั้งแต่ 3 แห่งขึ้นไป",
+    0.5: "เรียงลำดับและเชื่อมโยงความคิดไม่ถูกต้อง 2 แห่ง",
+    1.5: "เรียงลำดับและเชื่อมโยงความคิดไม่ถูกต้อง 1 แห่ง",
+    2:   "เรียงลำดับและเชื่อมโยงความคิดถูกต้อง"
+}
 
 def s9_predict_score(text):
     inputs = tokenizer_s9(
@@ -1573,7 +1630,9 @@ def s9_predict_score(text):
     with torch.no_grad():
         outputs    = model_s9(**inputs)
         pred_class = torch.argmax(outputs.logits, dim=1).item()
-    return pred_class
+
+    score = S9_SCORE_MAP[pred_class]
+    return score, S9_REASON_MAP[score]
 
 def s9_predict_batch(texts):
     df_tmp  = pd.DataFrame({"text": [str(t) for t in texts]})
@@ -1591,7 +1650,8 @@ def s9_predict_batch(texts):
     data_collator = DataCollatorWithPadding(tokenizer=tokenizer_s9)
     trainer       = Trainer(model=model_s9, data_collator=data_collator)
     predictions   = trainer.predict(dataset)
-    return np.argmax(predictions.predictions, axis=-1).tolist()
+    pred_classes  = np.argmax(predictions.predictions, axis=-1).tolist()
+    return [S9_SCORE_MAP[p] for p in pred_classes]
 
 # =========================================================
 # S10 — helpers
@@ -1973,6 +2033,14 @@ def s11_evaluate(text):
 
 MAX_LENGTH_S12 = 416
 
+S12_REASON_MAP = {
+    0.0: "ผิดตั้งแต่ 4 คำขึ้นไป",
+    0.5: "ผิด 3 คำ",
+    1.0: "ผิด 2 คำ",
+    1.5: "ผิด 1 คำ",
+    2.0: "ถูกต้องทั้งหมด"
+}
+
 def s12_predict_score(text):
     """S12: ส่งข้อความเข้า S12 model เพื่อทำนายคะแนน (single text)"""
     inputs = tokenizer_s12(
@@ -1986,7 +2054,9 @@ def s12_predict_score(text):
     with torch.no_grad():
         outputs    = model_s12(**inputs)
         pred_class = torch.argmax(outputs.logits, dim=1).item()
-    return float(id2label_s12[pred_class])
+
+    score = float(id2label_s12[pred_class])
+    return score, S12_REASON_MAP[score]
 
 def s12_predict_batch(texts):
     """S12: batch prediction ผ่าน Trainer"""
@@ -2015,6 +2085,14 @@ def s12_predict_batch(texts):
 
 MAX_LENGTH_S13 = 416
 
+S13_REASON_MAP = {
+    0.0: "ผิดตั้งแต่ 4 แห่งขึ้นไป",
+    0.5: "ผิด 3 แห่ง",
+    1.0: "ผิด 2 แห่ง",
+    1.5: "ผิด 1 แห่ง",
+    2.0: "ถูกต้องทั้งหมด"
+}
+
 def s13_predict_score(text):
 
     inputs = tokenizer_s13(
@@ -2025,23 +2103,13 @@ def s13_predict_score(text):
         max_length=MAX_LENGTH_S13
     )
 
-    inputs = {
-        k: v.to(device)
-        for k, v in inputs.items()
-    }
-
+    inputs = {k: v.to(device) for k, v in inputs.items()}
     with torch.no_grad():
+        outputs    = model_s13(**inputs)
+        pred_class = torch.argmax(outputs.logits, dim=1).item()
 
-        outputs = model_s13(**inputs)
-
-        pred_class = torch.argmax(
-            outputs.logits,
-            dim=1
-        ).item()
-
-    return float(
-        id2label_s13[pred_class]
-    )
+    score = float(id2label_s13[pred_class])
+    return score, S13_REASON_MAP[score]
 
 
 def s13_predict_batch(texts):
@@ -2147,32 +2215,27 @@ def score_student_answer(
 
     if (not has_keyword) and is_copy:
 
-        total_score = 0
+        #total_score = 0
 
         return {
             "ข้อตกลง_บรรทัด": num_line,
-            "ข้อตกลง_info": numline_info,
-
+            "ข้อตกลง_info":    numline_info,
             **copy_result,
-
-            "s7_score": 0,
-            "s7_info": keyword_info,
-
-            "s8_score": 0,
-            "s9_score": 0,
-
-            "s10_score": 0,
-            "sentiment": "",
+            "s7_score":    0,
+            "s7_info":     keyword_info,
+            "s8_score":    0,   "s8_reason":  "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "s9_score":    0,   "s9_reason":  "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "s10_score":   0,
+            "sentiment":   "",
             "sentiment_th": "",
             "s10_mistakes": [],
-
-            "s11_score": 0,
+            "s10_reason":  "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "s11_score":   0,
             "s11_reasons": ["คัดลอกบทอ่าน"],
-
-            "s12_score": 0,
-            "s13_score": 0,
-
-            "TOTAL_SCORE": total_score
+            "s11_reason":  "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "s12_score":   0,   "s12_reason": "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "s13_score":   0,   "s13_reason": "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "TOTAL_SCORE": 0
         }
 
     # =====================================================
@@ -2183,32 +2246,27 @@ def score_student_answer(
 
     if has_keyword and is_copy:
 
-        total_score = s7_score
+        #total_score = s7_score
 
         return {
             "ข้อตกลง_บรรทัด": num_line,
-            "ข้อตกลง_info": numline_info,
-
+            "ข้อตกลง_info":    numline_info,
             **copy_result,
-
-            "s7_score": s7_score,
-            "s7_info": keyword_info,
-
-            "s8_score": 0,
-            "s9_score": 0,
-
-            "s10_score": 0,
-            "sentiment": "",
+            "s7_score":    s7_score,
+            "s7_info":     keyword_info,
+            "s8_score":    0,   "s8_reason":  "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "s9_score":    0,   "s9_reason":  "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "s10_score":   0,
+            "sentiment":   "",
             "sentiment_th": "",
             "s10_mistakes": [],
-
-            "s11_score": 0,
+            "s10_reason":  "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "s11_score":   0,
             "s11_reasons": ["คัดลอกบทอ่าน"],
-
-            "s12_score": 0,
-            "s13_score": 0,
-
-            "TOTAL_SCORE": total_score
+            "s11_reason":  "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "s12_score":   0,   "s12_reason": "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "s13_score":   0,   "s13_reason": "ไม่ผ่านข้อตกลงการตรวจ (มีการคัดลอกบทอ่าน)",
+            "TOTAL_SCORE": s7_score
         }
 
     # =====================================================
@@ -2219,40 +2277,28 @@ def score_student_answer(
 
     if 1 <= num_line <= 2:
 
-        s8_score = s8_predict_score(
-            text_302
-        )
+        s8_score, s8_reason = s8_predict_score(text_302)
 
-        total_score = (
-            s7_score +
-            s8_score
-        )
 
         return {
             "ข้อตกลง_บรรทัด": num_line,
-            "ข้อตกลง_info": numline_info,
-
+            "ข้อตกลง_info":    numline_info,
             **copy_result,
-
-            "s7_score": s7_score,
-            "s7_info": keyword_info,
-
-            "s8_score": s8_score,
-
-            "s9_score": 0,
-
-            "s10_score": 0,
-            "sentiment": "",
+            "s7_score":    s7_score,
+            "s7_info":     keyword_info,
+            "s8_score":    s8_score, "s8_reason":  s8_reason,
+            "s9_score":    0,        "s9_reason":  "ไม่ตรวจ (คำตอบสั้น 1-2 บรรทัด)",
+            "s10_score":   0,
+            "sentiment":   "",
             "sentiment_th": "",
             "s10_mistakes": [],
-
-            "s11_score": 0,
+            "s10_reason":  "ไม่ตรวจ (คำตอบสั้น 1-2 บรรทัด)",
+            "s11_score":   0,
             "s11_reasons": ["ไม่ตรวจ"],
-
-            "s12_score": 0,
-            "s13_score": 0,
-
-            "TOTAL_SCORE": total_score
+            "s11_reason":  "ไม่ตรวจ (คำตอบสั้น 1-2 บรรทัด)",
+            "s12_score":   0,        "s12_reason": "ไม่ตรวจ (คำตอบสั้น 1-2 บรรทัด)",
+            "s13_score":   0,        "s13_reason": "ไม่ตรวจ (คำตอบสั้น 1-2 บรรทัด)",
+            "TOTAL_SCORE": s7_score + s8_score
         }
 
     # =====================================================
@@ -2260,67 +2306,70 @@ def score_student_answer(
     # ตรวจปกติ
     # =====================================================
 
-    s8_score = s8_predict_score(text_302)
-    s9_score = s9_predict_score(text_302)
+    s8_score,  s8_reason  = s8_predict_score(text_302)
+    s9_score,  s9_reason  = s9_predict_score(text_302)
+    s10_result            = s10_evaluate(text_302)
+    s11_result            = s11_evaluate(text_302)
+    s12_score, s12_reason = s12_predict_score(text_302)
+    s13_score, s13_reason = s13_predict_score(text_302)
 
-    s10_result = s10_evaluate(
-        text_302
-    )
+    # S10 reason
+    s10_score   = s10_result["s10_score"]
+    s10_mistakes = s10_result["s10_mistakes"]
+    if s10_score == 2:
+        s10_reason = "ถูกต้องทั้งหมด ไม่มีข้อผิดพลาด"
+    elif s10_score == 1:
+        s10_reason = f"มีข้อผิดพลาด 1 ประเภท: {s10_mistakes}"
+    else:
+        s10_reason = f"มีข้อผิดพลาดตั้งแต่ 2 ประเภทขึ้นไป: {s10_mistakes}"
 
-    s11_result = s11_evaluate(
-        text_302
-    )
+    # S11 reason
+    s11_score   = s11_result["s11_score"]
+    s11_reasons = s11_result["s11_reasons"]
+    if s11_score == 2:
+        s11_reason = "ถูกต้องทั้งหมด ไม่มีข้อผิดพลาด"
+    elif s11_score == 1.5:
+        s11_reason = f"มีข้อผิดพลาด 1 จุด: {'; '.join(s11_reasons)}"
+    elif s11_score == 1:
+        s11_reason = f"มีข้อผิดพลาด 2 จุด: {'; '.join(s11_reasons)}"
+    elif s11_score == 0.5:
+        s11_reason = f"มีข้อผิดพลาด 3 จุด: {'; '.join(s11_reasons)}"
+    else:
+        s11_reason = f"มีข้อผิดพลาดตั้งแต่ 4 จุดขึ้นไป: {'; '.join(s11_reasons)}"
 
-    s12_score = s12_predict_score(
-        text_302
-    )
-
-    s13_score = s13_predict_score(
-        text_302
-    )
-
-    # -------------------------
-    # NUM_LINE 3-4
-    # ลดครึ่ง
-    # -------------------------
-
+    # NUM_LINE 3-4 → ลดครึ่ง
     if 3 <= num_line <= 4:
-
         s11_result["s11_score"] /= 2
         s12_score /= 2
         s13_score /= 2
-
-        s11_result["s11_reasons"].append(
-            "จำนวนบรรทัด 3-4 บรรทัด (ลดคะแนนครึ่งหนึ่ง)"
-        )
+        s11_result["s11_reasons"].append("จำนวนบรรทัด 3-4 บรรทัด (ลดคะแนนครึ่งหนึ่ง)")
+        s11_reason += " [ลดครึ่งหนึ่งเพราะคำตอบ 3-4 บรรทัด]"
+        s12_reason += " [ลดครึ่งหนึ่งเพราะคำตอบ 3-4 บรรทัด]"
+        s13_reason += " [ลดครึ่งหนึ่งเพราะคำตอบ 3-4 บรรทัด]"
 
     total_score = (
-            s7_score +
-            s8_score +
-            s9_score +
-            s10_result["s10_score"] +
-            s11_result["s11_score"] +
-            s12_score +
-            s13_score
+        s7_score +
+        s8_score +
+        s9_score +
+        s10_result["s10_score"] +
+        s11_result["s11_score"] +
+        s12_score +
+        s13_score
     )
 
     return {
         "ข้อตกลง_บรรทัด": num_line,
-        "ข้อตกลง_info": numline_info,
-
+        "ข้อตกลง_info":    numline_info,
         **copy_result,
-
-        "s7_score": s7_score,
-        "s7_info": keyword_info,
-
-        "s8_score": s8_score,
-        "s9_score": s9_score,
-
+        "s7_score":    s7_score,
+        "s7_info":     keyword_info,
+        "s8_score":    s8_score,  "s8_reason":  s8_reason,
+        "s9_score":    s9_score,  "s9_reason":  s9_reason,
         **s10_result,
+        "s10_reason":  s10_reason,
         **s11_result,
-
-        "s12_score": s12_score,
-        "s13_score": s13_score,
-
+        "s11_reason":  s11_reason,
+        "s12_score":   s12_score, "s12_reason": s12_reason,
+        "s13_score":   s13_score, "s13_reason": s13_reason,
         "TOTAL_SCORE": total_score
     }

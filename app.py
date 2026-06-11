@@ -13,9 +13,7 @@ app = Flask(__name__)
 #หน้า home_page
 @app.route("/")
 def home():
-    return render_template(
-        "home_page.html"
-    )
+    return render_template("home_page.html")
 
 #หน้า single Answer
 @app.route("/single")
@@ -28,18 +26,71 @@ def single():
 @app.route("/score_single", methods=["POST"])
 def score_single():
 
-    text_301 = request.form["answer_301"]
-    text_302 = request.form["answer_302"]
+    text_301 = request.form.get("answer_301", "").strip()
+    text_302 = request.form.get("answer_302", "").strip()
 
-    # รับจำนวนบรรทัดจากหน้าเว็บ
-    numline_302 = request.form.get("numline_302")
+    numline_302 = request.form.get("numline_302", "0")
 
-    result_301 = predict_main_ideas(text_301)
+    # ------------------
+    # ข้อ 30.1
+    # ------------------
 
-    result_302 = score_student_answer(
-        text_302,
-        numline_302
-    )
+    if text_301:
+
+        result_301 = predict_main_ideas(text_301)
+
+    else:
+
+        result_301 = {
+            "S1_SCORE": 0,
+            "S2_SCORE": 0,
+            "S3_SCORE": 0,
+            "S4_SCORE": 0,
+            "S5_SCORE": 0,
+            "S6_SCORE": 0,
+
+            "S1_REASON": "ไม่มีคำตอบ",
+            "S2_REASON": "ไม่มีคำตอบ",
+            "S3_REASON": "ไม่มีคำตอบ",
+            "S4_REASONS": "ไม่มีคำตอบ",
+            "S5_REASON": "ไม่มีคำตอบ",
+            "S6_REASON": "ไม่มีคำตอบ",
+
+            "TOTAL_SCORE": 0
+        }
+
+    # ------------------
+    # ข้อ 30.2
+    # ------------------
+
+    if text_302:
+
+        result_302 = score_student_answer(
+            text_302,
+            numline_302
+        )
+
+    else:
+
+        result_302 = {
+            "s7_score": 0,
+            "s8_score": 0,
+            "s9_score": 0,
+            "s10_score": 0,
+            "s11_score": 0,
+            "s12_score": 0,
+            "s13_score": 0,
+
+            "s7_info": "ไม่มีคำตอบ",
+            "s8_reason": "ไม่มีคำตอบ",
+            "s9_reason": "ไม่มีคำตอบ",
+            "s10_reason": "ไม่มีคำตอบ",
+            "s11_reason": "ไม่มีคำตอบ",
+            "s12_reason": "ไม่มีคำตอบ",
+            "s13_reason": "ไม่มีคำตอบ",
+
+            "TOTAL_SCORE": 0
+        }
 
     print("numline_302 =", numline_302)
     print("RESULT_301 =", result_301)
@@ -59,90 +110,244 @@ def excel():
     )
 
 #รับไฟล์ Excel จากหน้า Excel
-@app.route(
-    "/score_excel",
-    methods=["POST"]
-)
+@app.route("/score_excel", methods=["POST"])
 def score_excel():
-    # รับไฟล์จากฟอร์ม
-    file = request.files[
-    "excel_file"
-]
-    # อ่าน Excel
+
+    file = request.files["excel_file"]
+
     df = pd.read_excel(file)
-    # เก็บผลลัพธ์
+    df = df.fillna("ไม่มีคำตอบ")
+    df.columns = df.columns.str.strip()
+
+    # ======================
+    # เก็บคะแนนทั้งหมด
+    # ======================
+
     score_301_list = []
     score_302_list = []
 
-    # วนตรวจทีละแถว
+    s1_list = []
+    s2_list = []
+    s3_list = []
+    s4_list = []
+    s5_list = []
+    s6_list = []
+
+    s7_list = []
+    s8_list = []
+    s9_list = []
+    s10_list = []
+    s11_list = []
+    s12_list = []
+    s13_list = []
+
+    #เก็บ reason
+    s1_reason_list = []
+    s2_reason_list = []
+    s3_reason_list = []
+    s4_reason_list = []
+    s5_reason_list = []
+    s6_reason_list = []
+
+    s7_info_list = []
+    s8_reason_list = []
+    s9_reason_list = []
+    s10_reason_list = []
+    s11_reason_list = []
+    s12_reason_list = []
+    s13_reason_list = []
+
+    # ======================
+    # คำนวณคะแนน
+    # ======================
+
     for _, row in df.iterrows():
 
-        text_301 = str(
-            row["answer_301"]
-        )
+        text_301 = str(row["TEXT_301"]).strip()
+        text_302 = str(row["TEXT_302"]).strip()
+        numline_302 = int(row["NUMLINE_302"])
 
-        text_302 = str(
-            row["answer_302"]
-        )
-        # ตรวจทีละแถว
-    for _, row in df.iterrows():
+        # -------- 30.1 --------
+        result_301 = predict_main_ideas(text_301)
+        print(result_301)
 
-        text_301 = str(row["answer_301"]).strip()
-        text_302 = str(row["answer_302"]).strip()
+        s1_reason_list.append(result_301.get("S1_REASON", ""))
+        s2_reason_list.append(result_301.get("S2_REASON", ""))
+        s3_reason_list.append(result_301.get("S3_REASON", ""))
+        s4_reason_list.append(result_301.get("S4_REASONS", ""))
+        s5_reason_list.append(result_301.get("S5_REASON", ""))
+        s6_reason_list.append(result_301.get("S6_REASON", ""))
 
-        # =====================
-        # ตรวจข้อ 30.1
-        # =====================
-
-        result_301 = predict_main_ideas(
-            text_301
-        )
+        s1_list.append(result_301.get("S1_SCORE", 0))
+        s2_list.append(result_301.get("S2_SCORE", 0))
+        s3_list.append(result_301.get("S3_SCORE", 0))
+        s4_list.append(result_301.get("S4_SCORE", 0))
+        s5_list.append(result_301.get("S5_SCORE", 0))
+        s6_list.append(result_301.get("S6_SCORE", 0))
 
         score_301_list.append(
-            result_301["TOTAL_SCORE"]
+            result_301.get("TOTAL_SCORE", 0)
         )
 
-        # =====================
-        # ตรวจข้อ 30.2
-        # =====================
-
+        # -------- 30.2 --------
         result_302 = score_student_answer(
-            text_302
+            text_302,
+            numline_302
         )
+
+        s7_info_list.append(result_302.get("s7_info", ""))
+
+        s8_reason_list.append(result_302.get("s8_reason", ""))
+        s9_reason_list.append(result_302.get("s9_reason", ""))
+
+        s10_reason_list.append(result_302.get("s10_reason", ""))
+        s11_reason_list.append(result_302.get("s11_reason", ""))
+
+        s12_reason_list.append(result_302.get("s12_reason", ""))
+        s13_reason_list.append(result_302.get("s13_reason", ""))
+
+        s7_list.append(result_302.get("s7_score", 0))
+        s8_list.append(result_302.get("s8_score", 0))
+        s9_list.append(result_302.get("s9_score", 0))
+        s10_list.append(result_302.get("s10_score", 0))
+        s11_list.append(result_302.get("s11_score", 0))
+        s12_list.append(result_302.get("s12_score", 0))
+        s13_list.append(result_302.get("s13_score", 0))
 
         score_302_list.append(
-            result_302["TOTAL_SCORE"]
+            result_302.get("TOTAL_SCORE", 0)
         )
 
-    # เพิ่มคะแนนลง DataFrame
+    # ======================
+    # เพิ่มคอลัมน์ลง df
+    # ======================
 
-    df["score_301"] = score_301_list
-    df["score_302"] = score_302_list
+    df["SCORE_301"] = score_301_list
+    df["SCORE_302"] = score_302_list
 
-    # คะแนนรวมทั้งสองข้อ
+    df["S1_SCORE"] = s1_list
+    df["S2_SCORE"] = s2_list
+    df["S3_SCORE"] = s3_list
+    df["S4_SCORE"] = s4_list
+    df["S5_SCORE"] = s5_list
+    df["S6_SCORE"] = s6_list
 
-    df["total_score"] = (
-        df["score_301"] +
-        df["score_302"]
+    df["S7_SCORE"] = s7_list
+    df["S8_SCORE"] = s8_list
+    df["S9_SCORE"] = s9_list
+    df["S10_SCORE"] = s10_list
+    df["S11_SCORE"] = s11_list
+    df["S12_SCORE"] = s12_list
+    df["S13_SCORE"] = s13_list
+
+    df["S1_REASON"] = s1_reason_list
+    df["S2_REASON"] = s2_reason_list
+    df["S3_REASON"] = s3_reason_list
+    df["S4_REASON"] = s4_reason_list
+    df["S5_REASON"] = s5_reason_list
+    df["S6_REASON"] = s6_reason_list
+
+    df["S7_INFO"] = s7_info_list
+    df["S8_REASON"] = s8_reason_list
+    df["S9_REASON"] = s9_reason_list
+    df["S10_REASON"] = s10_reason_list
+    df["S11_REASON"] = s11_reason_list
+    df["S12_REASON"] = s12_reason_list
+    df["S13_REASON"] = s13_reason_list
+
+    df["TOTAL_SCORE"] = (
+        df["SCORE_301"] +
+        df["SCORE_302"]
     )
 
-    # บันทึกไฟล์ผลลัพธ์
+    # ======================
+    # สร้าง HTML
+    # ======================
 
-    output_path = "results/result.xlsx"
+    rows_html = ""
 
-    df.to_excel(
-        output_path,
-        index=False
-    )
+    for _, row in df.iterrows():
 
-    # แสดงผลหน้าเว็บ
+        rows_html += f"""
+        <tr>
+
+            <td>{row['PAPER_CODE']}</td>
+
+            <td>
+                <details>
+                    <summary>ดูคำตอบ</summary>
+                    {row['TEXT_301']}
+                </details>
+            </td>
+
+            <td>
+                <details>
+                    <summary>ดูคำตอบ</summary>
+                    {row['TEXT_302']}
+                </details>
+            </td>
+
+            <td>{row['NUMLINE_302']}</td>
+
+            <td>
+                <details>
+                    <summary>{row['SCORE_301']}/10</summary>
+
+                    <b>S1</b> = {row['S1_SCORE']}<br>
+                    {row['S1_REASON']}<br><br>
+
+                    <b>S2</b> = {row['S2_SCORE']}<br>
+                    {row['S2_REASON']}<br><br>
+
+                    <b>S3</b> = {row['S3_SCORE']}<br>
+                    {row['S3_REASON']}<br><br>
+
+                    <b>S4</b> = {row['S4_SCORE']}<br>
+                    {row['S4_REASON']}<br><br>
+
+                    <b>S5</b> = {row['S5_SCORE']}<br>
+                    {row['S5_REASON']}<br><br>
+
+                    <b>S6</b> = {row['S6_SCORE']}<br>
+                    {row['S6_REASON']}
+                </details>
+            </td>
+
+            <td>
+                <details>
+                    <summary>{row['SCORE_302']}/20</summary>
+
+                    <b>S7</b> = {row['S7_SCORE']}<br>
+                    {row['S7_INFO']}<br><br>
+
+                    <b>S8</b> = {row['S8_SCORE']}<br>
+                    {row['S8_REASON']}<br><br>
+
+                    <b>S9</b> = {row['S9_SCORE']}<br>
+                    {row['S9_REASON']}<br><br>
+
+                    <b>S10</b> = {row['S10_SCORE']}<br>
+                    {row['S10_REASON']}<br><br>
+
+                    <b>S11</b> = {row['S11_SCORE']}<br>
+                    {row['S11_REASON']}<br><br>
+
+                    <b>S12</b> = {row['S12_SCORE']}<br>
+                    {row['S12_REASON']}<br><br>
+
+                    <b>S13</b> = {row['S13_SCORE']}<br>
+                    {row['S13_REASON']}
+                </details>
+            </td>
+
+            <td>{row['TOTAL_SCORE']}</td>
+
+        </tr>
+        """
 
     return render_template(
-        "view_score.html",
-        table=df.to_html(
-            classes="table table-striped",
-            index=False
-        )
+        "excel_score.html",
+        rows_html=rows_html
     )
 
 #รันเว็บ
