@@ -2,6 +2,8 @@ from flask import Flask
 from flask import render_template
 from flask import request
 import pandas as pd
+from flask import send_file
+import io
 
 from model_scoring import (
     predict_main_ideas,
@@ -9,6 +11,7 @@ from model_scoring import (
 )
 
 app = Flask(__name__)
+RESULT_DF = None
 
 #หน้า home_page
 @app.route("/")
@@ -260,6 +263,9 @@ def score_excel():
         df["SCORE_302"]
     )
 
+    global RESULT_DF
+    RESULT_DF = df.copy()
+
     # ======================
     # สร้าง HTML
     # ======================
@@ -348,6 +354,139 @@ def score_excel():
     return render_template(
         "excel_score.html",
         rows_html=rows_html
+    )
+
+#ดาวน์โหลด Excel ที่มีผลการตรวจ
+@app.route("/download_excel")
+def download_excel():
+
+    global RESULT_DF
+
+    if RESULT_DF is None:
+        return "ยังไม่มีผลการตรวจ กรุณาอัปโหลดไฟล์ก่อน"
+
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(
+        output,
+        engine="openpyxl"
+    ) as writer:
+
+        # ==================================
+        # SHEET 1 : คะแนนรวม
+        # ==================================
+
+        summary_cols = [
+            "PAPER_CODE",
+            "SCORE_301",
+            "SCORE_302",
+            "TOTAL_SCORE"
+        ]
+
+        RESULT_DF[summary_cols].to_excel(
+            writer,
+            sheet_name="RESULT",
+            index=False
+        )
+
+        # ==================================
+        # SHEET 2 : คำตอบนักเรียน
+        # ==================================
+
+        answer_cols = [
+            "PAPER_CODE",
+            "TEXT_301",
+            "TEXT_302",
+            "NUMLINE_302"
+        ]
+
+        RESULT_DF[answer_cols].to_excel(
+            writer,
+            sheet_name="ANSWERS",
+            index=False
+        )
+
+        # ==================================
+        # SHEET 3 : คะแนนย่อย + เหตุผล
+        # ==================================
+
+        RESULT_DF.to_excel(
+            writer,
+            sheet_name="DETAIL",
+            index=False
+        )
+
+        # ==================================
+        # SHEET 4 : เกณฑ์การให้คะแนน
+        # ==================================
+
+        criteria_df = pd.DataFrame([
+            ["30.1", "S1", "ใจความสำคัญ", 4],
+            ["30.1", "S2", "การเรียงลำดับและเชื่อมโยงความคิด", 2],
+            ["30.1", "S3", "ความถูกต้องตามหลักการเขียนย่อความ", 1],
+            ["30.1", "S4", "การสะกดคำ", 1],
+            ["30.1", "S5", "การใช้คำ/ถ้อยคำสำนวน", 1],
+            ["30.1", "S6", "การใช้ประโยค", 1],
+
+            ["30.2", "S7", "คำบอกข้อคิดเห็น", 1],
+            ["30.2", "S8", "เหตุผลสนับสนุน", 8],
+            ["30.2", "S9", "การเรียงลำดับและเชื่อมโยงความคิด", 3],
+            ["30.2", "S10", "ความถูกต้องตามหลักการแสดงความคิดเห็น", 2],
+            ["30.2", "S11", "การสะกดคำ", 2],
+            ["30.2", "S12", "การใช้คำ/ถ้อยคำสำนวน", 2],
+            ["30.2", "S13", "การใช้ประโยค", 2],
+        ],
+        columns=[
+            "ข้อ",
+            "รหัส",
+            "รายละเอียด",
+            "คะแนนเต็ม"
+        ])
+
+        criteria_df.to_excel(
+            writer,
+            sheet_name="CRITERIA",
+            index=False
+        )
+
+        # ==================================
+        # ปรับความกว้างคอลัมน์
+        # ==================================
+
+        for sheet in writer.book.worksheets:
+
+            for column in sheet.columns:
+
+                max_length = 0
+
+                column_letter = column[0].column_letter
+
+                for cell in column:
+
+                    try:
+                        max_length = max(
+                            max_length,
+                            len(str(cell.value))
+                        )
+                    except:
+                        pass
+
+                adjusted_width = min(
+                    max_length + 5,
+                    100
+                )
+
+                sheet.column_dimensions[
+                    column_letter
+                ].width = adjusted_width
+
+    output.seek(0)
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name="score_result.xlsx",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
 #รันเว็บ
