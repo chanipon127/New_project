@@ -24,3 +24,5 @@ s3_path = r"C:\Users\User\Documents\New_project\all_dataset\S3"
 for root, dirs, files in os.walk(s3_path):
     for file in files:
         print(os.path.join(root, file))
+
+

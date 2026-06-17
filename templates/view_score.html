@@ -337,6 +337,42 @@
     <div class="container">
         <h2 class="section-title">ข้อ 30.1</h2>
 
+        <details class="reason-box">
+            <summary>ข้อตกลงการตรวจ</summary>
+
+            <div class="reason-detail">
+                <p><b>Similarity:</b> {{ result_301.get("AGREEMENT_SIMILARITY",0) }}</p>
+
+                <p><b>สถานะ:</b>
+                    {% if result_301.get("AGREEMENT_PASS", False) %}
+                    <span class="good">ผ่าน</span>
+                    {% else %}
+                    <span class="bad">ไม่ผ่าน</span>
+                    {% endif %}
+                </p>
+
+                <p><b>รายละเอียด:</b>
+                    {{ result_301.get("AGREEMENT_REASON","-") }}
+                </p>
+
+                <p><b>ลำดับข้อ:</b>
+                    {{ result_301.get("ENUMERATION_CHECK","-") }}
+                </p>
+
+                <p><b>การยกข้อความ:</b>
+                    {{ result_301.get("COPY_CHECK","-") }}
+                </p>
+
+                <p><b>Copy Similarity:</b>
+                    {{ result_301.get("COPY_SIMILARITY",0) }}
+                </p>
+
+                <p><b>ประโยคความเดียว:</b>
+                    {{ result_301.get("SINGLE_SENTENCE_CHECK","-") }}
+                </p>
+            </div>
+        </details>
+
         <table class="score-table">
 
             <tr>
@@ -435,11 +471,50 @@
             คะแนนรวม : {{ result_301.get("TOTAL_SCORE",0) }}/10
         </div>
 
+
+
         <hr>
 
         <h2 class="section-title">
             ข้อ 30.2
         </h2>
+
+        <details class="reason-box">
+            <summary>ข้อตกลงการตรวจ</summary>
+
+            <div class="reason-detail">
+
+                <p>
+                    <b>จำนวนบรรทัด :</b>
+                    {{ result_302.get("ข้อตกลง_บรรทัด", 0) }}
+                </p>
+
+                <p>
+                    <b>รายละเอียด :</b>
+                    {{ result_302.get("ข้อตกลง_info", "-") }}
+                </p>
+
+                <p>
+                    <b>การคัดลอก :</b>
+                    {{ result_302.get("copy_result", "-") }}
+                </p>
+
+                <p>
+                    <b>Copy Similarity :</b>
+                    {{ result_302.get("copy_similarity", 0) }}
+                </p>
+
+                <p>
+                    <b>สถานะ :</b>
+                    {% if not result_302.get("is_copy", False) %}
+                    <span class="good">ผ่าน</span>
+                    {% else %}
+                    <span class="bad">ไม่ผ่าน</span>
+                    {% endif %}
+                </p>
+
+            </div>
+        </details>
 
         <table class="score-table">
 

@@ -160,6 +160,26 @@ def score_excel():
     s12_reason_list = []
     s13_reason_list = []
 
+    #เก็บข้อตกลงการตรวจ 301 
+    agreement_similarity_301_list = []
+    agreement_pass_301_list = []
+    agreement_reason_301_list = []
+
+    enumeration_check_list = []
+    copy_check_301_list = []
+    copy_similarity_301_list = []
+
+    single_sentence_check_list = []
+
+    #เก็บข้อตกลงการตรวจ 302
+    agreement_line_302_list = []
+    agreement_info_302_list = []
+
+    copy_result_302_list = []
+    copy_similarity_302_list = []
+
+    is_copy_302_list = []
+
     # ======================
     # คำนวณคะแนน
     # ======================
@@ -172,6 +192,35 @@ def score_excel():
 
         # -------- 30.1 --------
         result_301 = predict_main_ideas(text_301)
+
+        #ข้อตกลงการตรวจ 301       
+        agreement_similarity_301_list.append(
+            result_301.get("AGREEMENT_SIMILARITY", 0)
+        )
+
+        agreement_pass_301_list.append(
+            result_301.get("AGREEMENT_PASS", False)
+        )
+
+        agreement_reason_301_list.append(
+            result_301.get("AGREEMENT_REASON", "")
+        )
+
+        enumeration_check_list.append(
+            result_301.get("ENUMERATION_CHECK", "")
+        )
+
+        copy_check_301_list.append(
+            result_301.get("COPY_CHECK", "")
+        )
+
+        copy_similarity_301_list.append(
+            result_301.get("COPY_SIMILARITY", 0)
+        )
+
+        single_sentence_check_list.append(
+            result_301.get("SINGLE_SENTENCE_CHECK", "")
+        )
         print(result_301)
 
         s1_reason_list.append(result_301.get("S1_REASON", ""))
@@ -196,6 +245,27 @@ def score_excel():
         result_302 = score_student_answer(
             text_302,
             numline_302
+        )
+
+         #ข้อตกลงการตรวจ 302
+        agreement_line_302_list.append(
+            result_302.get("ข้อตกลง_บรรทัด", 0)
+        )
+
+        agreement_info_302_list.append(
+            result_302.get("ข้อตกลง_info", "")
+        )
+
+        copy_result_302_list.append(
+            result_302.get("copy_result", "")
+        )
+
+        copy_similarity_302_list.append(
+            result_302.get("copy_similarity", 0)
+        )
+
+        is_copy_302_list.append(
+            result_302.get("is_copy", False)
         )
 
         s7_info_list.append(result_302.get("s7_info", ""))
@@ -250,6 +320,18 @@ def score_excel():
     df["S5_REASON"] = s5_reason_list
     df["S6_REASON"] = s6_reason_list
 
+    #dataframe ข้อตกลงการตรวจ 301 
+    df["AGREEMENT_SIMILARITY_301"] = agreement_similarity_301_list
+    df["AGREEMENT_PASS_301"] = agreement_pass_301_list
+    df["AGREEMENT_REASON_301"] = agreement_reason_301_list
+
+    df["ENUMERATION_CHECK"] = enumeration_check_list
+
+    df["COPY_CHECK_301"] = copy_check_301_list
+    df["COPY_SIMILARITY_301"] = copy_similarity_301_list
+
+    df["SINGLE_SENTENCE_CHECK"] = single_sentence_check_list
+
     df["S7_INFO"] = s7_info_list
     df["S8_REASON"] = s8_reason_list
     df["S9_REASON"] = s9_reason_list
@@ -257,6 +339,15 @@ def score_excel():
     df["S11_REASON"] = s11_reason_list
     df["S12_REASON"] = s12_reason_list
     df["S13_REASON"] = s13_reason_list
+
+    #dataframe ข้อตกลงการตรวจ 302
+    df["AGREEMENT_LINE_302"] = agreement_line_302_list
+    df["AGREEMENT_INFO_302"] = agreement_info_302_list
+
+    df["COPY_RESULT_302"] = copy_result_302_list
+    df["COPY_SIMILARITY_302"] = copy_similarity_302_list
+
+    df["IS_COPY_302"] = is_copy_302_list
 
     df["TOTAL_SCORE"] = (
         df["SCORE_301"] +
@@ -293,7 +384,32 @@ def score_excel():
                 </details>
             </td>
 
-            <td>{row['NUMLINE_302']}</td>
+            <td>
+                <details>
+                <b>ข้อตกลงการตรวจ 301</b><br><br>
+
+                    <b>Similarity :</b>
+                    {row['AGREEMENT_SIMILARITY_301']}<br>
+
+                    <b>สถานะ :</b>
+                    {"ผ่าน" if row['AGREEMENT_PASS_301'] else "ไม่ผ่าน"}<br>
+
+                    <b>รายละเอียด :</b>
+                    {row['AGREEMENT_REASON_301']}<br>
+
+                    <b>ลำดับข้อ :</b>
+                    {row['ENUMERATION_CHECK']}<br>
+
+                    <b>การยกข้อความ :</b>
+                    {row['COPY_CHECK_301']}<br>
+
+                    <b>Copy Similarity :</b>
+                    {row['COPY_SIMILARITY_301']}<br>
+
+                    <b>ประโยคความเดียว :</b>
+                    {row['SINGLE_SENTENCE_CHECK']}<br><br>
+                </details>
+            </td>
 
             <td>
                 <details>
@@ -317,6 +433,29 @@ def score_excel():
                     <b>S6</b> = {row['S6_SCORE']}<br>
                     {row['S6_REASON']}
                 </details>
+            </td>
+
+            <td>{row['NUMLINE_302']}</td>
+
+            <td>
+                <details>
+                <b>ข้อตกลงการตรวจ 302</b><br><br>
+
+                    <b>จำนวนบรรทัด :</b>
+                    {row['AGREEMENT_LINE_302']}<br>
+
+                    <b>รายละเอียด :</b>
+                    {row['AGREEMENT_INFO_302']}<br>
+
+                    <b>การคัดลอก :</b>
+                    {row['COPY_RESULT_302']}<br>
+
+                    <b>Copy Similarity :</b>
+                    {row['COPY_SIMILARITY_302']}<br>
+
+                    <b>สถานะ :</b>
+                    {"ไม่ผ่าน" if row['IS_COPY_302'] else "ผ่าน"}<br><br>
+                </datails>
             </td>
 
             <td>

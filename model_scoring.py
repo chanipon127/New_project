@@ -1172,6 +1172,184 @@ def has_enumeration(text):
     return "มีการใช้ลำดับข้อ" if len(matches) >= 2 else "ไม่มีการใช้ลำดับข้อ"
 
 # =========================================================
+# AGREEMENT CHECKS — ข้อตกลงการตรวจ
+# =========================================================
+
+def _zero_s2_to_s6(reason_suffix):
+    """สร้าง dict คะแนน 0 สำหรับ S2–S6 พร้อมเหตุผล"""
+    return {
+        "S2_SCORE":      0,
+        "S2_REASON":     f"ไม่ผ่านข้อตกลงการตรวจ ({reason_suffix})",
+        "S2_PROB_0":     0.0,
+        "S2_PROB_1":     0.0,
+        "S2_PROB_2":     0.0,
+        "S3_SCORE":      0,
+        "S3_SIMILARITY": 0.0,
+        "S3_REASON":     f"ไม่ผ่านข้อตกลงการตรวจ ({reason_suffix})",
+        "S4_SCORE":      0.0,
+        "S4_REASONS":    f"ไม่ผ่านข้อตกลงการตรวจ ({reason_suffix})",
+        "S5_SCORE":      0.0,
+        "S5_PRED_CLASS": -1,
+        "S5_REASON":     f"ไม่ผ่านข้อตกลงการตรวจ ({reason_suffix})",
+        "S6_SCORE":      0.0,
+        "S6_PRED_CLASS": -1,
+        "S6_REASON":     f"ไม่ผ่านข้อตกลงการตรวจ ({reason_suffix})",
+    }
+
+
+def check_agreement_similarity(text):
+    """
+    เงื่อนไข 1: ตรวจว่าย่อความไม่ผิดเนื้อหาจากบทอ่าน
+    คืนค่า: (passed: bool, similarity: float, reason: str)
+    """
+    error, similarity = check_paraphrase(text, s3_reference_text)
+    if error:
+        reason = (
+            f"ย่อความผิดเนื้อหาจากบทอ่าน "
+            f"(similarity={similarity} < {PARAPHRASE_THRESHOLD})"
+        )
+        return False, similarity, reason
+    return True, similarity, "ผ่านข้อตกลงการตรวจ"
+
+
+def check_agreement_enumeration(text):
+    """
+    เงื่อนไข 2: ตรวจว่ามีการใช้ลำดับข้อหรือไม่
+    คืนค่า: (failed: bool, label: str)
+    """
+    label = has_enumeration(text)
+    return label == "มีการใช้ลำดับข้อ", label
+
+
+def check_agreement_copy(text):
+    """
+    เงื่อนไข 3: ตรวจว่ามีการยกข้อความจากบทอ่านหรือไม่
+    คืนค่า: (failed: bool, label: str, similarity: float)
+    """
+    label, similarity = check_copy(copy_reference_text, text)
+    return label == "มีการยกข้อความจากบทอ่าน", label, similarity
+
+
+def check_agreement_single_sentence(text):
+    """
+    เงื่อนไข 4: ตรวจว่าเป็นประโยคความเดียวหรือไม่
+    คืนค่า: (failed: bool, label: str)
+    """
+    label = check_single_sentence(text)
+    return label == "เป็นประโยคความเดียว", label
+
+
+def check_agreement_s1(s1_score):
+    """
+    เงื่อนไข 5: ถ้า S1 = 0 → S2–S6 ได้ 0 ทั้งหมด
+    คืนค่า: (failed: bool)
+    """
+    return s1_score == 0
+
+
+def run_agreement_checks(text, s1_score=None):
+    """
+    รวมการตรวจข้อตกลงทั้งหมดตามลำดับ
+    คืนค่า dict:
+      agreement_meta  — ข้อมูล/สถานะการตรวจแต่ละเงื่อนไข
+      blocked         — True ถ้าไม่ผ่านข้อตกลงใดข้อตกลงหนึ่ง
+      block_reason    — ชื่อเงื่อนไขที่ไม่ผ่าน (หรือ None)
+      zero_scores     — dict คะแนน 0 S2–S6 (หรือ None ถ้าผ่านทั้งหมด)
+    """
+    meta = {
+        "AGREEMENT_PASS":        None,
+        "AGREEMENT_SIMILARITY":  None,
+        "AGREEMENT_REASON":      None,
+        "ENUMERATION_CHECK":     "ยังไม่ตรวจ",
+        "COPY_CHECK":            "ยังไม่ตรวจ",
+        "COPY_SIMILARITY":       0.0,
+        "SINGLE_SENTENCE_CHECK": "ยังไม่ตรวจ",
+    }
+
+    # เงื่อนไข 1: similarity
+    passed, similarity, reason = check_agreement_similarity(text)
+    meta["AGREEMENT_PASS"]      = passed
+    meta["AGREEMENT_SIMILARITY"] = similarity
+    meta["AGREEMENT_REASON"]    = reason
+
+    if not passed:
+        meta["ENUMERATION_CHECK"]     = "ไม่ได้ตรวจ (ไม่ผ่านข้อตกลง similarity)"
+        meta["COPY_CHECK"]            = "ไม่ได้ตรวจ (ไม่ผ่านข้อตกลง similarity)"
+        meta["SINGLE_SENTENCE_CHECK"] = "ไม่ได้ตรวจ (ไม่ผ่านข้อตกลง similarity)"
+        return {
+            "agreement_meta": meta,
+            "blocked":        True,
+            "block_reason":   "similarity",
+            "zero_scores":    {
+                **_zero_s2_to_s6("ย่อความผิดเนื้อหาจากบทอ่าน"),
+                "S3_SIMILARITY": similarity,
+            },
+        }
+
+    # เงื่อนไข 2: ลำดับข้อ
+    enum_failed, enum_label = check_agreement_enumeration(text)
+    meta["ENUMERATION_CHECK"]     = enum_label
+    meta["SINGLE_SENTENCE_CHECK"] = (
+        "ไม่ได้ตรวจ (มีลำดับข้อ)" if enum_failed else "ยังไม่ตรวจ"
+    )
+
+    if enum_failed:
+        meta["COPY_CHECK"] = "ไม่ได้ตรวจ (มีลำดับข้อ)"
+        return {
+            "agreement_meta": meta,
+            "blocked":        True,
+            "block_reason":   "enumeration",
+            "zero_scores":    _zero_s2_to_s6("มีการใช้ลำดับข้อ"),
+        }
+
+    # เงื่อนไข 3: ยกข้อความ
+    copy_failed, copy_label, copy_sim = check_agreement_copy(text)
+    meta["COPY_CHECK"]            = copy_label
+    meta["COPY_SIMILARITY"]       = copy_sim
+    meta["SINGLE_SENTENCE_CHECK"] = (
+        "ไม่ได้ตรวจ (มีการยกข้อความ)" if copy_failed else "ยังไม่ตรวจ"
+    )
+
+    if copy_failed:
+        return {
+            "agreement_meta": meta,
+            "blocked":        True,
+            "block_reason":   "copy",
+            "zero_scores":    {
+                **_zero_s2_to_s6("มีการยกข้อความจากบทอ่าน"),
+                "S3_SIMILARITY": copy_sim,
+            },
+        }
+
+    # เงื่อนไข 4: ประโยคความเดียว
+    single_failed, single_label = check_agreement_single_sentence(text)
+    meta["SINGLE_SENTENCE_CHECK"] = single_label
+
+    if single_failed:
+        return {
+            "agreement_meta": meta,
+            "blocked":        True,
+            "block_reason":   "single_sentence",
+            "zero_scores":    _zero_s2_to_s6("เป็นประโยคความเดียว"),
+        }
+
+    # เงื่อนไข 5: S1 = 0 (ตรวจได้เฉพาะถ้าส่ง s1_score มาด้วย)
+    if s1_score is not None and check_agreement_s1(s1_score):
+        return {
+            "agreement_meta": meta,
+            "blocked":        True,
+            "block_reason":   "s1_zero",
+            "zero_scores":    _zero_s2_to_s6("S1 = 0"),
+        }
+
+    return {
+        "agreement_meta": meta,
+        "blocked":        False,
+        "block_reason":   None,
+        "zero_scores":    None,
+    }
+
+# =========================================================
 # MAIN IDEA + S2 + S3 + S4 + S5 + S6
 # =========================================================
 
@@ -1179,47 +1357,6 @@ def predict_main_ideas(text):
 
     processed_text = preprocess_for_main_idea(text)
 
-    # =========================================================
-    # ข้อตกลงการตรวจ: ตรวจว่าย่อความไม่ผิดเนื้อหาจากบทอ่าน
-    # ใช้ cosine similarity เดียวกับ S3
-    # =========================================================
-
-    agreement_error, agreement_similarity = check_paraphrase(
-        text, s3_reference_text
-    )
-
-    # ถ้า similarity ต่ำกว่า threshold → ย่อผิดเนื้อหา → คะแนน 0 ทั้งหมด
-    if agreement_error:
-        zero_result = {
-            "SEGMENT_TEXT":         processed_text,
-            "AGREEMENT_PASS":       False,
-            "AGREEMENT_SIMILARITY": agreement_similarity,
-            "AGREEMENT_REASON":     (
-                f"ย่อความผิดเนื้อหาจากบทอ่าน "
-                f"(similarity={agreement_similarity} < {PARAPHRASE_THRESHOLD})"
-            ),
-            "ENUMERATION_CHECK":      "ไม่ได้ตรวจ (ไม่ผ่านข้อตกลง similarity)",
-            "SINGLE_SENTENCE_CHECK":  "ไม่ได้ตรวจ (ไม่ผ่านข้อตกลง similarity)",
-            "COPY_CHECK":             "ไม่ได้ตรวจ (ไม่ผ่านข้อตกลง similarity)",
-            "COPY_SIMILARITY":        0.0
-        }
-        for label in LABEL_COLUMNS:
-            zero_result[label]           = 0
-            zero_result[f"{label}_PROB"] = 0.0
-
-        zero_result.update({
-            "S1_SCORE":    0,
-            "S2_SCORE":    0, "S2_REASON": "ไม่ผ่านข้อตกลงการตรวจ", "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
-            "S3_SCORE":    0, "S3_SIMILARITY": agreement_similarity,
-            "S3_REASON":   "ไม่ผ่านข้อตกลงการตรวจ",
-            "S4_SCORE":    0.0, "S4_REASONS": "ไม่ผ่านข้อตกลงการตรวจ",
-            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1, "S5_REASON": "ไม่ผ่านข้อตกลงการตรวจ",
-            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1, "S6_REASON": "ไม่ผ่านข้อตกลงการตรวจ",
-            "TOTAL_SCORE": 0
-        })
-        return zero_result
-
-    # ผ่านข้อตกลง → ดำเนินการตรวจปกติ
     # ---------- S1 ----------
     inputs = main_tokenizer(
         processed_text,
@@ -1228,127 +1365,79 @@ def predict_main_ideas(text):
         padding="max_length",
         max_length=MAX_LENGTH_MAIN
     )
+
     inputs = {k: v.to(device) for k, v in inputs.items()}
 
     with torch.no_grad():
-        outputs   = main_model(**inputs)
-        logits    = outputs.logits
-        probs     = torch.sigmoid(logits).cpu().numpy()[0]
+        outputs = main_model(**inputs)
+        logits = outputs.logits
+        probs = torch.sigmoid(logits).cpu().numpy()[0]
+
         THRESHOLD = 0.89
-        preds     = (probs >= THRESHOLD).astype(int)
+        preds = (probs >= THRESHOLD).astype(int)
 
     result = {
-        "SEGMENT_TEXT":         processed_text,
-        "AGREEMENT_PASS":       True,
-        "AGREEMENT_SIMILARITY": agreement_similarity,
-        "AGREEMENT_REASON":     "ผ่านข้อตกลงการตรวจ"
+        "SEGMENT_TEXT": processed_text
     }
 
     for i, label in enumerate(LABEL_COLUMNS):
-        result[label]              = int(preds[i])
-        result[f"{label}_PROB"]    = float(probs[i])
+        result[label] = int(preds[i])
+        result[f"{label}_PROB"] = float(probs[i])
 
-    # เพิ่ม S1_REASON
+    # ---------- S1_REASON ----------
     s1_found = [
         f"มีใจความสำคัญ ที่ {i}"
         for i, label in enumerate(LABEL_COLUMNS, start=1)
         if result[label] == 1
     ]
-    result["S1_REASON"] = " | ".join(s1_found) if s1_found else "ไม่พบใจความสำคัญ"
 
-    # =========================================================
-    # ข้อตกลงการตรวจ: ถ้ามีลำดับข้อ → ตรวจแค่ S1, S2-S6 = 0
-    # =========================================================
-
-    enumeration_found = has_enumeration(text)
-    result["ENUMERATION_CHECK"]     = enumeration_found
-    result["SINGLE_SENTENCE_CHECK"] = "ไม่ได้ตรวจ (มีลำดับข้อ)" if enumeration_found == "มีการใช้ลำดับข้อ" else ""
+    result["S1_REASON"] = (
+        " | ".join(s1_found)
+        if s1_found
+        else "ไม่พบใจความสำคัญ"
+    )
 
     s1_score = sum(result[label] for label in LABEL_COLUMNS)
     result["S1_SCORE"] = s1_score
 
-    if enumeration_found == "มีการใช้ลำดับข้อ":
-        result.update({
-            "S2_SCORE":    0, "S2_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการใช้ลำดับข้อ)", "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
-            "S3_SCORE":    0, "S3_SIMILARITY": 0.0,
-            "S3_REASON":   "ไม่ผ่านข้อตกลงการตรวจ (มีการใช้ลำดับข้อ)",
-            "S4_SCORE":    0.0, "S4_REASONS": "ไม่ผ่านข้อตกลงการตรวจ (มีการใช้ลำดับข้อ)",
-            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1, "S5_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการใช้ลำดับข้อ)",
-            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1, "S6_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการใช้ลำดับข้อ)",
-            "COPY_CHECK":  "ไม่ได้ตรวจ (มีลำดับข้อ)",
-            "COPY_SIMILARITY": 0.0,
-            "TOTAL_SCORE": s1_score
-        })
+    # ---------- AGREEMENT ----------
+    agreement = run_agreement_checks(
+        text=text,
+        s1_score=s1_score
+    )
+
+    result.update(
+        agreement["agreement_meta"]
+    )
+
+    # ไม่ผ่านข้อตกลงการตรวจ
+    if agreement["blocked"]:
+
+        result.update(
+            agreement["zero_scores"]
+        )
+
+        if agreement["block_reason"] in [
+            "similarity",
+            "s1_zero"
+        ]:
+            result["TOTAL_SCORE"] = 0
+        else:
+            # enumeration / copy / single_sentence
+            result["TOTAL_SCORE"] = s1_score
+
         return result
-
-    # =========================================================
-    # ข้อตกลงการตรวจ: ถ้ามีการยกข้อความ → ตรวจแค่ S1, S2-S6 = 0
-    # =========================================================
-
-    copy_label, copy_similarity = check_copy(copy_reference_text, text)
-    result["COPY_CHECK"]       = copy_label
-    result["COPY_SIMILARITY"]  = copy_similarity
-
-    if copy_label == "มีการยกข้อความจากบทอ่าน":
-        result.update({
-            "S2_SCORE":    0, "S2_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการยกข้อความจากบทอ่าน)", "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
-            "S3_SCORE":    0, "S3_SIMILARITY": copy_similarity,
-            "S3_REASON":   "ไม่ผ่านข้อตกลงการตรวจ (มีการยกข้อความจากบทอ่าน)",
-            "S4_SCORE":    0.0, "S4_REASONS": "ไม่ผ่านข้อตกลงการตรวจ (มีการยกข้อความจากบทอ่าน)",
-            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1, "S5_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการยกข้อความจากบทอ่าน)",
-            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1, "S6_REASON": "ไม่ผ่านข้อตกลงการตรวจ (มีการยกข้อความจากบทอ่าน)",
-            "SINGLE_SENTENCE_CHECK": "ไม่ได้ตรวจ (มีการยกข้อความ)",
-            "TOTAL_SCORE": s1_score
-        })
-        return result
-
-    # =========================================================
-    # ข้อตกลงการตรวจ: ถ้าเป็นประโยคความเดียว → ตรวจแค่ S1, S2-S6 = 0
-    # =========================================================
-
-    single_sentence_check = check_single_sentence(text)
-    result["SINGLE_SENTENCE_CHECK"] = single_sentence_check
-
-    if single_sentence_check == "เป็นประโยคความเดียว":
-        result.update({
-             "S2_SCORE":    0, "S2_REASON": "ไม่ผ่านข้อตกลงการตรวจ (เป็นประโยคความเดียว)", "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
-            "S3_SCORE":    0, "S3_SIMILARITY": 0.0,
-            "S3_REASON":   "ไม่ผ่านข้อตกลงการตรวจ (เป็นประโยคความเดียว)",
-            "S4_SCORE":    0.0, "S4_REASONS": "ไม่ผ่านข้อตกลงการตรวจ (เป็นประโยคความเดียว)",
-            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1, "S5_REASON": "ไม่ผ่านข้อตกลงการตรวจ (เป็นประโยคความเดียว)",
-            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1, "S6_REASON": "ไม่ผ่านข้อตกลงการตรวจ (เป็นประโยคความเดียว)",
-            "TOTAL_SCORE": s1_score
-        })
-        return result
-
-    # =========================================================
-    # ข้อตกลงการตรวจ: ถ้า S1 = 0 → S2-S6 ได้ 0 คะแนนทั้งหมด
-    # =========================================================
-
-    if s1_score == 0:
-        result.update({
-            "S2_SCORE":    0, "S2_REASON": "ไม่ผ่านข้อตกลงการตรวจ (S1 = 0)", "S2_PROB_0": 0.0, "S2_PROB_1": 0.0, "S2_PROB_2": 0.0,
-            "S3_SCORE":    0, "S3_SIMILARITY": 0.0,
-            "S3_REASON":   "ไม่ผ่านข้อตกลงการตรวจ (S1 = 0)",
-            "S4_SCORE":    0.0, "S4_REASONS": "ไม่ผ่านข้อตกลงการตรวจ (S1 = 0)",
-            "S5_SCORE":    0.0, "S5_PRED_CLASS": -1, "S5_REASON": "ไม่ผ่านข้อตกลงการตรวจ (S1 = 0)",
-            "S6_SCORE":    0.0, "S6_PRED_CLASS": -1, "S6_REASON": "ไม่ผ่านข้อตกลงการตรวจ (S1 = 0)",
-            "TOTAL_SCORE": 0
-        })
-        return result
-
-    # S1 > 0 → ดำเนินการตรวจ S2-S6 ตามปกติ
 
     # ---------- S2 ----------
     s2_result = predict_s2_score(processed_text)
     result.update(s2_result)
 
     # ---------- S3 ----------
-    s3_result = predict_s3_score(text)   # ← ใช้ข้อความดิบ (ไม่ segment)
+    s3_result = predict_s3_score(text)
     result.update(s3_result)
 
     # ---------- S4 ----------
-    s4_result = predict_s4_score(text)   # ← ใช้ข้อความดิบ
+    s4_result = predict_s4_score(text)
     result.update(s4_result)
 
     # ---------- S5 ----------
@@ -1449,36 +1538,77 @@ reference_embeddings = copy_model.encode(
     normalize_embeddings=True
 )
 
-def check_copying(
-    student_text,
-    threshold=0.90
-):
-
+def check_copying(student_text, threshold=0.90):
+    if len(reference_embeddings) == 0:
+        return {
+            "copy_similarity":   0.0,
+            "is_copy":           False,
+            "copy_result":       "ไม่มีข้อมูล reference",
+            "matched_reference": ""
+        }
     student_embedding = copy_model.encode(
         str(student_text),
         convert_to_numpy=True,
         normalize_embeddings=True
     )
-
-    scores = cosine_similarity(
-        [student_embedding],
-        reference_embeddings
-    )[0]
-
-    best_idx = np.argmax(scores)
+    scores     = cosine_similarity([student_embedding], reference_embeddings)[0]
+    best_idx   = int(np.argmax(scores))
     best_score = float(scores[best_idx])
-
     return {
-        "copy_similarity": round(best_score, 4),
-        "is_copy": best_score >= threshold,
-        "copy_result": (
-            "คัดลอกบทอ่าน"
-            if best_score >= threshold
-            else "ไม่ถือว่าคัดลอก"
-        ),
-        "matched_reference":
-            reference_texts[best_idx]
+        "copy_similarity":   round(best_score, 4),
+        "is_copy":           best_score >= threshold,
+        "copy_result":       "คัดลอกบทอ่าน" if best_score >= threshold else "ไม่ถือว่าคัดลอก",
+        "matched_reference": reference_texts[best_idx]
     }
+
+# =========================================================
+# GARBAGE KEY IDEAS CHECK
+# =========================================================
+
+GARBAGE_KEY_IDEAS = [
+
+        "สินค้ามือสองเป็นชื่อเรียกของสินค้าที่ผ่านการใช้งานหรือใช้ประโยชน์มาแล้วและถูกนำมาขายต่อ",
+        "สินค้ามือสองเป็นของที่ผ่านการใช้งานหรือใช้ประโยชน์มาแล้ว และถูกนำมาขายต่อ",
+        "สินค้ามือสองเป็นสินค้าที่ผ่านใช้งานและนำมาขายต่อในตลาด",
+        "สินค้ามือสองคือการนำสิ่งของที่ไม่ใช้งาน ไปขายต่อให้แก่ผู้อื่นที่ต้องการ",
+
+        "ธุรกิจสินค้ามือสองเริ่มต้นจากนำสินค้าที่ผ่านการใช้งานมาแลกเปลี่ยนค้าขาย",
+        "การขายสินค้ามือเริ่มต้นจากการค้าขายในลักษณะเปิดท้ายขายของโดยที่นำสิ่งของที่ตนเองไม่ได้ใช้แล้วนำมาขายต่อ ต่อมาการขยายตัวธุรกิจสินค้ามือสอง",
+        "มีการนำเสนอของที่ตนเองไม่ได้ใช้แล้วมาขาย ต่อมาจึงกลายเป็นธุรกิจสินค้ามือสอง",
+        "นำของที่ไม่ใช้แล้วนำมาขายต่อ และต่อมาขยายตัวเป็นธุรกิจ",
+
+        "สินค้ามือสองมีทั้งข้อดีและข้อเสีย",
+        "สินค้ามือสองได้รับการยอมรับว่าเป็นประโยชน์ต่อสิ่งแวดล้อม แต่มีข้อเสีย คือมีเชื้อโรคปนเปื้อนมากับสิ่งนั้นๆ",
+        "สินค้ามือสองเป็นสินค้าที่ให้ประโยชน์ เพราะลดการเกิดขยะและการเบียดเบียนสิ่งแวดล้อมไม่ต้องผลิตซ้ำ ขณะเดียวกันสินค้ามือสองก็ส่งผลกระทบต่อผู้บริโภคหลายประการ",
+        "ถึงแม้ว่าสินค้ามือสองจะมีข้อดีจำนวนมาก แต่ก็สร้างปัญหามากเหมือนกัน ทางด้านสุขภาพและกฎหมาย",
+
+        "ผู้ขายสินค้าควรสร้างความเชื่อมั่นในคุณภาพสินค้าส่วนผู้ซื้อจะต้องคำนึงในเรื่องการใช้ทรัพยากรให้คุ้มค่าและเกิดประโยชน์สูงสุด",
+        "ผู้ขายสินค้ามือสองควรสร้างความน่าเชื่อมั่นในคุณภาพสินค้าและผู้ซื้อจะต้องคำนึงถึงเรื่องการใช้ทรัพยากรให้เกิดประโยชน์",
+        "ผู้ขายสินค้ามือสองควรสร้างความเชื่อมั่นในคุณภาพสินค้า ส่วนผู้ซื้อควรตระหนักถึงการใช้ทรัพยากรอย่างคุ้มค่า"
+
+]
+garbage_key_idea_emb = copy_model.encode(
+    GARBAGE_KEY_IDEAS,
+    convert_to_numpy=True,
+    normalize_embeddings=True
+)
+
+
+def _has_valid_key_idea(text, threshold=0.4):
+    """คืน True ถ้ามีอย่างน้อย 1 ใจความที่ cosine >= threshold"""
+    # กรองเฉพาะคำในพจนานุกรมก่อน encode
+    tokens       = word_tokenize(text, engine='newmm', keep_whitespace=False)
+    valid_tokens = [t for t in tokens if t.strip() and t in thai_dict]
+    reconstructed = " ".join(valid_tokens)
+    if not reconstructed.strip():
+        return False
+    student_emb = copy_model.encode(
+        reconstructed,
+        convert_to_numpy=True,
+        normalize_embeddings=True
+    )
+    scores = cosine_similarity([student_emb], garbage_key_idea_emb)[0]
+    return bool(any(s >= threshold for s in scores))
 
 
 # =========================================================
@@ -1541,6 +1671,127 @@ LONGDO_API_URL = 'https://api.longdo.com/spell-checker/proof'
 
 thai_dict            = set(w for w in set(thai_words()) if (' ' not in w) and w.strip())
 allowed_punctuations = {'.', ',', '-', '(', ')', '!', '?', '%', '"', '"', '\u2018', '\u2019', '"', "'", '\u2026', '\u0e2f'}
+
+# =========================================================
+# RETRY HELPER
+# =========================================================
+
+def _api_get_with_retry(url, headers, params, max_retries=3, backoff=2, timeout=30):
+    for attempt in range(max_retries):
+        try:
+            response = requests.get(url, headers=headers, params=params, timeout=timeout)
+            if response.status_code == 200:
+                return response
+            print(f"[WARN] GET {url} status={response.status_code} attempt={attempt+1}")
+            if response.status_code == 429:
+                print("[WARN] Rate limit hit, waiting 10 seconds...")
+                time.sleep(10)
+                continue
+        except requests.exceptions.Timeout:
+            print(f"[WARN] GET timeout attempt={attempt+1}: {url}")
+        except Exception as e:
+            print(f"[WARN] GET error attempt={attempt+1}: {e}")
+        if attempt < max_retries - 1:
+            time.sleep(backoff ** attempt)
+    return None
+
+
+def _api_post_with_retry(url, headers, data, max_retries=3, backoff=2, timeout=30):
+    for attempt in range(max_retries):
+        try:
+            response = requests.post(url, headers=headers, data=data, timeout=timeout)
+            if response.status_code == 200:
+                return response
+            print(f"[WARN] POST {url} status={response.status_code} attempt={attempt+1}")
+        except requests.exceptions.Timeout:
+            print(f"[WARN] POST timeout attempt={attempt+1}: {url}")
+        except Exception as e:
+            print(f"[WARN] POST error attempt={attempt+1}: {e}")
+        if attempt < max_retries - 1:
+            time.sleep(backoff ** attempt)
+    return None
+
+# =========================================================
+# NORMALIZE
+# =========================================================
+
+_THAI_CONSONANTS = "\u0e01-\u0e2e"
+_THAI_DIACRITICS = "\u0e30-\u0e3a\u0e40-\u0e4e\u0e47-\u0e4e"
+
+_RE_REPEATED_CONSONANT = re.compile(rf"([{_THAI_CONSONANTS}])\1{{1,}}")
+_RE_REPEATED_DIACRITIC = re.compile(rf"([{_THAI_DIACRITICS}])\1{{1,}}")
+
+
+def normalize_repeated_chars(text: str) -> str:
+    if not isinstance(text, str):
+        return ""
+    text = _RE_REPEATED_DIACRITIC.sub(r"\1", text)
+    text = _RE_REPEATED_CONSONANT.sub(r"\1", text)
+    return text
+
+# =========================================================
+# GARBAGE TEXT DETECTION
+# =========================================================
+
+def is_empty_or_nan(text):
+    return not text.strip() or text.strip().lower() == "nan"
+
+
+def preprocess_text(text: str) -> str:
+    if not isinstance(text, str):
+        text = str(text)
+    text = text.strip()
+    if not text or text.lower() == "nan":
+        return ""
+    text = re.sub(r'https?://\S+|www\.\S+', '', text)
+    text = re.sub(r'(.)\1{2,}', r'\1\1', text)
+    text = normalize(text)
+    text = re.sub(r'[^ก-๙a-zA-Z0-9\s,\.\-\(\)\!\?%"ฯ\u201c\u201d\u2026]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+def is_garbage_text(text, max_avg_token_len=15, min_valid_ratio=0.3, max_diacritic_ratio=1.0):
+    tokens = word_tokenize(text, engine='newmm', keep_whitespace=False)
+    tokens = [t for t in tokens if t.strip()]
+    if not tokens:
+        return True
+
+    # เงื่อนไข 1: token เฉลี่ยยาวผิดปกติ
+    avg_len = sum(len(t) for t in tokens) / len(tokens)
+    if avg_len > max_avg_token_len:
+        return True
+
+    # เงื่อนไข 2: คำในพจนานุกรมน้อยเกินไป
+    valid_tokens   = [t for t in tokens if t in thai_dict or t.isdigit()]
+    invalid_tokens = [t for t in tokens if t not in thai_dict and not t.isdigit()]
+    valid_ratio    = len(valid_tokens) / len(tokens)
+    if valid_ratio < min_valid_ratio:
+        return True
+
+    # เงื่อนไข 3 (จาก clean_text): ไม่มีตัวอักษรไทยหรืออังกฤษเลย
+    thai_chars = len(re.findall(r'[ก-๙]', text))
+    eng_chars  = len(re.findall(r'[a-zA-Z]', text))
+    if thai_chars == 0 and eng_chars == 0:
+        return True
+
+    # เงื่อนไข 4 (จาก clean_text): วรรณยุกต์เยอะผิดปกติ
+    # clean_text ใช้ [่้๊๋็] / [ก-๙] > 0.5
+    # ใช้ร่วมกับ max_diacritic_ratio เดิมของเรา (สระ+วรรณยุกต์ / พยัญชนะ)
+    tone_marks = len(re.findall(r'[่้๊๋็]', text))
+    if thai_chars > 0 and (tone_marks / thai_chars) > 0.5:
+        return True
+
+    diacritics = re.findall(r'[\u0e30-\u0e3a\u0e40-\u0e4e\u0e47-\u0e4e]', text)
+    consonants = re.findall(r'[\u0e01-\u0e2e]', text)
+    if consonants and (len(diacritics) / len(consonants)) > max_diacritic_ratio:
+        return True
+
+    # เงื่อนไข 5: คำนอกพจนานุกรมเกิน 20 คำ → เทียบ cosine
+    if len(invalid_tokens) > 20:
+        if not _has_valid_key_idea(text):
+            return True
+
+    return False
 
 # =========================================================
 # ข้อตกลงการตรวจ
@@ -2166,6 +2417,35 @@ def s13_predict_batch(texts):
 # COMBINED PIPELINE  (ข้อตกลง → S7 → S8 → S9 → S10 → S11 → S12)
 # =========================================================
 
+# เพิ่มตรงนี้ก่อน score_student_answer
+def _zero_score_result(reason, tag, s7_score=0, s7_info="", s8_score=0):
+    return {
+        "ข้อตกลง_บรรทัด": 0,
+        "ข้อตกลง_info": reason,
+
+        "copy_similarity": 0.0,
+        "is_copy": False,
+        "copy_result": tag,
+        "matched_reference": "",
+
+        "s7_score": s7_score,
+        "s7_info": s7_info,
+
+        "s8_score": s8_score,
+        "s9_score": 0,
+
+        "s10_score": 0,
+        "sentiment": "",
+        "sentiment_th": "",
+        "s10_mistakes": [tag],
+
+        "s11_score": 0,
+        "s11_reasons": [tag],
+
+        "s12_score": 0,
+        "s13_score": 0,
+    }
+
 def score_student_answer(
     text_302,
     numline_302=None
@@ -2173,29 +2453,51 @@ def score_student_answer(
 
     text_302 = str(text_302)
 
+    raw_text = preprocess_text(text_302)
+
+    # =========================
+    # ไม่มีคำตอบ
+    # =========================
+    if not raw_text:
+        return {
+            "ข้อตกลง_บรรทัด": 0,
+            "ข้อตกลง_info": "ไม่มีคำตอบ",
+            "s7_score": 0,
+            "s8_score": 0,
+            "s9_score": 0,
+            "s10_score": 0,
+            "s11_score": 0,
+            "s12_score": 0,
+            "s13_score": 0
+        }
+
+    # =========================
+    # ใช้ text เดียวทั้งระบบ
+    # =========================
+    
+    text = normalize_repeated_chars(raw_text)
+
     # -------------------------
     # ข้อตกลง
     # -------------------------
 
     if numline_302 is not None:
-
         num_line = int(numline_302)
-
         if 1 <= num_line <= 2:
-            numline_info = "คำตอบ 1-2 บรรทัด"
+            numline_info = "คำตอบ 1-2 บรรทัด ตรวจเฉพาะ S7-S8"
+        elif 3 <= num_line <= 4:
+            numline_info = "คำตอบ 3-4 บรรทัด จะตรวจทุกส่วนแต่ระบบจะหักคะแนนส่วนภาษาเหลือเพียงครึ่งหนึ่ง"
         else:
-            numline_info = "ไม่ใช่คำตอบสั้น"
-
+            numline_info = "คำตอบมากกว่า 4 บรรทัด"
     else:
-        num_line, numline_info = check_numline(
-            text_302
-        )
+        num_line, numline_info = check_numline(text_302)
+
 
     has_keyword, keyword_info = (
         s7_keyword_classify(text_302)
     )
-
     s7_score = 1 if has_keyword else 0
+
 
     # -------------------------
     # ตรวจคัดลอก
